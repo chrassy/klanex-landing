@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>klanex — the execution layer for AI agents</title>
+  <meta name="description" content="klanex sits between your LLM agents and production APIs. Schema-gated intents, retries with backoff, human approvals, encrypted credentials, replay, and a full audit trail — so a hallucinated key or a rate limit never crashes your workflow." />
+  <meta property="og:title" content="klanex — the execution layer for AI agents" />
+  <meta property="og:description" content="Your agents reason. klanex executes — reliably." />
+  <meta property="og:type" content="website" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container nav-inner">
+    <a class="wordmark" href="#top">klanex<span class="wordmark-dot">_</span></a>
+    <div class="nav-links">
+      <a href="#how">How it works</a>
+      <a href="#features">Features</a>
+      <a href="#code">Code</a>
+      <a href="#pricing">Pricing</a>
+      <a href="https://github.com/chrassy/klanex" target="_blank" rel="noopener">GitHub</a>
+    </div>
+    <a class="btn btn-primary btn-sm" href="#cta">Request early access</a>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="hero-glow" aria-hidden="true"></div>
+  <div class="container">
+    <p class="hero-eyebrow"><span class="pill">Enterprise service bus, rebuilt for agentic AI</span></p>
+    <h1>Your agents reason.<br /><span class="grad">klanex executes.</span></h1>
+    <p class="hero-sub">
+      The asynchronous execution layer between LLM agents and production APIs.
+      Fire a tool-use intent, get an execution ID in milliseconds — klanex owns
+      the retries, backoff, approvals, credentials, and audit trail, so a
+      hallucinated JSON key or a rate limit never crashes your workflow.
+    </p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="#cta">Request early access</a>
+      <a class="btn btn-ghost" href="#code">See the code →</a>
+    </div>
+
+    <div class="terminal" role="img" aria-label="Terminal showing an agent tool call executed through klanex">
+      <div class="terminal-bar">
+        <span class="tdot tdot-r"></span><span class="tdot tdot-y"></span><span class="tdot tdot-g"></span>
+        <span class="terminal-title">agent → klanex → stripe</span>
+      </div>
+      <pre class="terminal-body"><code><span class="t-dim">$</span> <span class="t-cmd">curl -s https://api.klanex.dev/v1/executions -H "X-API-Key: klx_…" -d '{</span>
+<span class="t-cmd">    "target":  { "url": "https://api.stripe.com/v1/refunds", "headers": { "Authorization": "Bearer …" } },</span>
+<span class="t-cmd">    "payload": { "charge_id": "ch_9f2k", "amount": 500 },</span>
+<span class="t-cmd">    "payload_schema": { … },  "idempotency_key": "refund-ch_9f2k",  "requires_approval": true }'</span>
+
+<span class="t-ok">{"execution_id": "exe_4d0c85a6", "status": "PENDING_APPROVAL"}</span>   <span class="t-dim"># 14 ms — agent is free</span>
+
+<span class="t-dim">─ human clicks Approve in Slack ───────────────────────────────────────────</span>
+<span class="t-dim">─ attempt 1 → stripe returns 429 · klanex backs off, agent never knows ───</span>
+<span class="t-dim">─ attempt 2 → 200 OK ──────────────────────────────────────────────────────</span>
+
+<span class="t-dim">webhook →</span> <span class="t-ok">execution.completed</span>  <span class="t-dim">(attempts: 2, HMAC-signed, credentials never left the vault)</span></code></pre>
+    </div>
+  </div>
+</header>
+
+<section class="section" id="problem">
+  <div class="container">
+    <h2 class="section-title">Wiring an LLM straight into production APIs<br /><span class="grad">breaks in three predictable ways</span></h2>
+    <div class="grid grid-3">
+      <div class="card">
+        <div class="card-icon">{ }</div>
+        <h3>Hallucinated payloads</h3>
+        <p>One invented JSON key and your five-step workflow dies at step three — with the API's cryptic 400 lost far from the model that caused it.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">⏱</div>
+        <h3>Brittle synchronous loops</h3>
+        <p>An agent thinks for 30–60 seconds. Held-open HTTP connections time out, and every timeout takes the agent's operational context with it.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">⚠</div>
+        <h3>Naked credentials</h3>
+        <p>Nobody wants raw production API keys floating through a generative environment — or an agent autonomously refunding customers unsupervised.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section section-alt" id="how">
+  <div class="container">
+    <h2 class="section-title">Decouple reasoning from execution</h2>
+    <p class="section-sub">klanex closes the synchronous loop in milliseconds, then executes on its own terms: queued, retried, supervised, recorded.</p>
+    <div class="flow">
+      <div class="flow-step">
+        <div class="flow-num">1</div>
+        <h3>Validate</h3>
+        <p>Every intent is checked against your JSON Schema. Hallucinations bounce back instantly with an <code>llm_hint</code> the agent uses to fix itself.</p>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="flow-num">2</div>
+        <h3>Queue</h3>
+        <p>Valid intents are persisted to the audit trail and queued. Your agent gets <code>202 + execution_id</code> and moves on with its life.</p>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="flow-num">3</div>
+        <h3>Execute</h3>
+        <p>Isolated workers make the real call with per-host circuit breakers, timeouts, and exponential backoff on 429s, 5xxs, and outages.</p>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="flow-num">4</div>
+        <h3>Report</h3>
+        <p>Terminal states fire an HMAC-signed webhook to your backend — or poll the API. Either way, the full history is queryable forever.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="features">
+  <div class="container">
+    <h2 class="section-title">Reliability features your agents<br /><span class="grad">can't provide for themselves</span></h2>
+    <div class="grid grid-3">
+      <div class="card">
+        <h3>Schema gate with self-correction</h3>
+        <p>Invalid payloads are rejected in milliseconds with an <code>llm_hint</code> written to be pasted straight back into the model's context.</p>
+      </div>
+      <div class="card">
+        <h3>Retries &amp; circuit breakers</h3>
+        <p>429 / 5xx / timeouts are absorbed with exponential backoff and per-host breakers. Permanent 4xxs fail fast with a correction hint.</p>
+      </div>
+      <div class="card">
+        <h3>Human-in-the-loop approvals</h3>
+        <p>Flag destructive calls with <code>requires_approval</code>. They pause until a human approves or rejects — refunds and deletions stay supervised.</p>
+      </div>
+      <div class="card">
+        <h3>Idempotency built in</h3>
+        <p>Pass an <code>idempotency_key</code> and network retries can never double-refund, double-email, or double-anything.</p>
+      </div>
+      <div class="card">
+        <h3>Credentials in a vault</h3>
+        <p>Your API keys are encrypted with Cloud KMS the moment they arrive, decrypted only in worker memory for the duration of the call, and redacted everywhere else.</p>
+      </div>
+      <div class="card">
+        <h3>Replay without re-prompting</h3>
+        <p>Payloads are stored byte-exact. After an outage, one call re-runs every failure — no expensive second trip through the LLM.</p>
+      </div>
+      <div class="card">
+        <h3>Full audit trail</h3>
+        <p>Every intent, attempt, decision, and result is recorded and queryable — the compliance story your enterprise buyers will ask about first.</p>
+      </div>
+      <div class="card">
+        <h3>Signed webhooks</h3>
+        <p>Results arrive HMAC-signed with replay protection. SDK verification is one function call, byte-compatible across Go, TypeScript, and Python.</p>
+      </div>
+      <div class="card">
+        <h3>Per-tenant rate limits</h3>
+        <p>Token buckets per API key keep a runaway agent loop from taking the platform — or your budget — down with it.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section section-alt" id="code">
+  <div class="container">
+    <h2 class="section-title">Three lines to production-ready</h2>
+    <p class="section-sub">Official SDKs for TypeScript and Python, or plain HTTP from anything else. The 422 self-correction loop comes free.</p>
+    <div class="code-tabs">
+      <div class="tab-row" role="tablist">
+        <button class="tab active" role="tab" data-tab="ts">TypeScript</button>
+        <button class="tab" role="tab" data-tab="py">Python</button>
+        <button class="tab" role="tab" data-tab="curl">curl</button>
+      </div>
+      <pre class="code-panel active" data-panel="ts"><code><span class="c-kw">import</span> { Klanex, KlanexSchemaError } <span class="c-kw">from</span> <span class="c-str">"@klanex/sdk"</span>;
+
+<span class="c-kw">const</span> klanex = <span class="c-kw">new</span> <span class="c-fn">Klanex</span>({ apiKey, baseUrl });
+
+<span class="c-kw">try</span> {
+  <span class="c-kw">const</span> { executionId } = <span class="c-kw">await</span> klanex.<span class="c-fn">execute</span>({
+    target: { url: <span class="c-str">"https://api.stripe.com/v1/refunds"</span>, headers: { Authorization: key } },
+    payload: agentGeneratedJson,
+    payloadSchema: refundSchema,
+    idempotencyKey: <span class="c-str">`refund-${chargeId}`</span>,
+  });
+} <span class="c-kw">catch</span> (err) {
+  <span class="c-kw">if</span> (err <span class="c-kw">instanceof</span> KlanexSchemaError) {
+    <span class="c-cm">// feed the hint back — the agent fixes its own payload</span>
+    messages.<span class="c-fn">push</span>({ role: <span class="c-str">"user"</span>, content: err.llmHint });
+    <span class="c-kw">return</span> <span class="c-fn">retryWithLLM</span>(messages);
+  }
+}</code></pre>
+      <pre class="code-panel" data-panel="py"><code><span class="c-kw">from</span> klanex <span class="c-kw">import</span> Klanex, KlanexSchemaError
+
+klanex = <span class="c-fn">Klanex</span>(api_key=API_KEY, base_url=BASE_URL)
+
+<span class="c-kw">try</span>:
+    accepted = klanex.<span class="c-fn">execute</span>(
+        target={<span class="c-str">"url"</span>: <span class="c-str">"https://api.stripe.com/v1/refunds"</span>,
+                <span class="c-str">"headers"</span>: {<span class="c-str">"Authorization"</span>: key}},
+        payload=agent_generated_json,
+        payload_schema=refund_schema,
+        idempotency_key=<span class="c-str">f"refund-{charge_id}"</span>,
+    )
+<span class="c-kw">except</span> KlanexSchemaError <span class="c-kw">as</span> err:
+    <span class="c-cm"># feed the hint back — the agent fixes its own payload</span>
+    messages.<span class="c-fn">append</span>({<span class="c-str">"role"</span>: <span class="c-str">"user"</span>, <span class="c-str">"content"</span>: err.llm_hint})
+    <span class="c-kw">return</span> <span class="c-fn">retry_with_llm</span>(messages)</code></pre>
+      <pre class="code-panel" data-panel="curl"><code><span class="c-dim">$</span> curl -s https://api.klanex.dev/v1/executions \
+    -H <span class="c-str">"X-API-Key: klx_…"</span> \
+    -d <span class="c-str">'{
+      "target": { "url": "https://api.stripe.com/v1/refunds",
+                  "headers": { "Authorization": "Bearer …" } },
+      "payload": { "charge_id": "ch_9f2k", "amount": 500 },
+      "payload_schema": { "type": "object", "required": ["charge_id", "amount"] },
+      "idempotency_key": "refund-ch_9f2k"
+    }'</span>
+
+{<span class="c-str">"execution_id"</span>: <span class="c-str">"exe_4d0c85a6"</span>, <span class="c-str">"status"</span>: <span class="c-str">"QUEUED"</span>}</code></pre>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="pricing">
+  <div class="container">
+    <h2 class="section-title">Pay for reliability,<br /><span class="grad">not for tokens</span></h2>
+    <p class="section-sub">No inference markup, no seat licenses. You're charged when klanex successfully executes on your behalf.</p>
+    <div class="grid grid-3 pricing-grid">
+      <div class="card price-card">
+        <h3>Developer</h3>
+        <div class="price">$0</div>
+        <p class="price-note">while in early access</p>
+        <ul>
+          <li>Full engine: schema gate, retries, replay</li>
+          <li>Signed webhooks &amp; audit trail</li>
+          <li>Community support</li>
+        </ul>
+      </div>
+      <div class="card price-card price-featured">
+        <div class="price-badge">Most popular</div>
+        <h3>Scale</h3>
+        <div class="price">per execution</div>
+        <p class="price-note">fractions of a cent per successful call</p>
+        <ul>
+          <li>Everything in Developer</li>
+          <li>Human-in-the-loop approvals</li>
+          <li>Custom rate limits per key</li>
+          <li>KMS credential vault</li>
+        </ul>
+      </div>
+      <div class="card price-card">
+        <h3>Enterprise</h3>
+        <div class="price">Let's talk</div>
+        <p class="price-note">for teams putting agents near money</p>
+        <ul>
+          <li>99.99% uptime SLA</li>
+          <li>Dedicated queue partitions</li>
+          <li>Isolated execution environments</li>
+          <li>Compliance exports</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section section-cta" id="cta">
+  <div class="container cta-box">
+    <h2>Stop babysitting your agents' API calls.</h2>
+    <p>klanex is in early access — we're onboarding design partners now.</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="mailto:aljaz.klanecek@gmail.com?subject=klanex%20early%20access">Request early access</a>
+      <a class="btn btn-ghost" href="https://github.com/chrassy/klanex" target="_blank" rel="noopener">Star on GitHub →</a>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container footer-inner">
+    <span class="wordmark wordmark-sm">klanex<span class="wordmark-dot">_</span></span>
+    <div class="footer-links">
+      <a href="https://github.com/chrassy/klanex" target="_blank" rel="noopener">Engine</a>
+      <a href="https://github.com/chrassy/klanex-js" target="_blank" rel="noopener">TypeScript SDK</a>
+      <a href="https://github.com/chrassy/klanex-python" target="_blank" rel="noopener">Python SDK</a>
+    </div>
+    <span class="footer-copy">© 2026 klanex</span>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>

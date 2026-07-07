@@ -22,6 +22,7 @@
     <div class="nav-links">
       <a href="#how">How it works</a>
       <a href="#features">Features</a>
+      <a href="#integrations">Integrations</a>
       <a href="#code">Code</a>
       <a href="#pricing">Pricing</a>
       <a href="https://github.com/chrassy/klanex" target="_blank" rel="noopener">GitHub</a>
@@ -136,7 +137,7 @@
       </div>
       <div class="card">
         <h3>Human-in-the-loop approvals</h3>
-        <p>Flag destructive calls with <code>requires_approval</code>. They pause until a human approves or rejects — refunds and deletions stay supervised.</p>
+        <p>Flag destructive calls with <code>requires_approval</code>. They pause until a human approves or rejects — right from a Slack button. Approvals never carry over to replays.</p>
       </div>
       <div class="card">
         <h3>Idempotency built in</h3>
@@ -148,7 +149,7 @@
       </div>
       <div class="card">
         <h3>Replay without re-prompting</h3>
-        <p>Payloads are stored byte-exact. After an outage, one call re-runs every failure — no expensive second trip through the LLM.</p>
+        <p>Payloads are stored byte-exact. After an outage, one bulk-replay call re-runs every failure — no expensive second trip through the LLM, and permanently rejected payloads are skipped automatically.</p>
       </div>
       <div class="card">
         <h3>Full audit trail</h3>
@@ -161,6 +162,30 @@
       <div class="card">
         <h3>Per-tenant rate limits</h3>
         <p>Token buckets per API key keep a runaway agent loop from taking the platform — or your budget — down with it.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="integrations">
+  <div class="container">
+    <h2 class="section-title">Plugged into where<br /><span class="grad">your team already works</span></h2>
+    <p class="section-sub">Configure once with a single API call — credentials are sealed in the KMS vault like everything else.</p>
+    <div class="grid grid-3">
+      <div class="card integration-card">
+        <div class="card-icon">#</div>
+        <h3>Slack — approve without leaving the channel</h3>
+        <p>Executions awaiting approval post to Slack with <strong>Approve / Reject</strong> buttons. Clicks are verified against Slack's request signature, the decision lands in the audit trail as <code>via Slack by @you</code>, and the message updates with the outcome. Optional failure alerts included.</p>
+      </div>
+      <div class="card integration-card">
+        <div class="card-icon">◆</div>
+        <h3>Jira — failures become tickets, automatically</h3>
+        <p>When an execution fails terminally, klanex files an issue in your project: execution ID, target, attempts, error code, and one-line replay instructions. No payload contents ever leave the vault. Nothing to triage by hand at 2am.</p>
+      </div>
+      <div class="card integration-card">
+        <div class="card-icon">⇄</div>
+        <h3>Everything else — signed webhooks &amp; API</h3>
+        <p>Every lifecycle event fires an HMAC-signed webhook, and the full audit trail is queryable through the <a class="inline-link" href="https://github.com/chrassy/klanex/blob/main/docs/openapi.yaml" target="_blank" rel="noopener">OpenAPI-specified</a> REST API — wire up Teams, PagerDuty, or your own dashboard.</p>
       </div>
     </div>
   </div>
@@ -247,7 +272,7 @@ klanex = <span class="c-fn">Klanex</span>(api_key=API_KEY, base_url=BASE_URL)
         <p class="price-note">fractions of a cent per successful call</p>
         <ul>
           <li>Everything in Developer</li>
-          <li>Human-in-the-loop approvals</li>
+          <li>Slack approvals &amp; Jira escalation</li>
           <li>Custom rate limits per key</li>
           <li>KMS credential vault</li>
         </ul>

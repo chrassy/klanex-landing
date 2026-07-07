@@ -190,6 +190,12 @@ h1 {
 .integration-card h3 { font-size: 15.5px; }
 .inline-link { color: var(--accent-2); }
 .inline-link:hover { text-decoration: underline; }
+.brand-icon {
+  /* Brand marks sit on a neutral tile, not the gradient one. */
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border);
+}
+.brand-logo { width: 21px; height: 21px; display: block; }
 
 /* ── pricing ─────────────────────────────────────────────────────────── */
 .pricing-grid { align-items: stretch; }

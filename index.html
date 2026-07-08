@@ -51,7 +51,7 @@
         <span class="tdot tdot-r"></span><span class="tdot tdot-y"></span><span class="tdot tdot-g"></span>
         <span class="terminal-title">agent → klanex → stripe</span>
       </div>
-      <pre class="terminal-body"><code><span class="t-dim">$</span> <span class="t-cmd">curl -s https://api.klanex.dev/v1/executions -H "X-API-Key: klx_…" -d '{</span>
+      <pre class="terminal-body"><code><span class="t-dim">$</span> <span class="t-cmd">curl -s https://api.klanexai.com/v1/executions -H "X-API-Key: klx_…" -d '{</span>
 <span class="t-cmd">    "target":  { "url": "https://api.stripe.com/v1/refunds", "headers": { "Authorization": "Bearer …" } },</span>
 <span class="t-cmd">    "payload": { "charge_id": "ch_9f2k", "amount": 500 },</span>
 <span class="t-cmd">    "payload_schema": { … },  "idempotency_key": "refund-ch_9f2k",  "requires_approval": true }'</span>
@@ -234,7 +234,7 @@ klanex = <span class="c-fn">Klanex</span>(api_key=API_KEY, base_url=BASE_URL)
     <span class="c-cm"># feed the hint back — the agent fixes its own payload</span>
     messages.<span class="c-fn">append</span>({<span class="c-str">"role"</span>: <span class="c-str">"user"</span>, <span class="c-str">"content"</span>: err.llm_hint})
     <span class="c-kw">return</span> <span class="c-fn">retry_with_llm</span>(messages)</code></pre>
-      <pre class="code-panel" data-panel="curl"><code><span class="c-dim">$</span> curl -s https://api.klanex.dev/v1/executions \
+      <pre class="code-panel" data-panel="curl"><code><span class="c-dim">$</span> curl -s https://api.klanexai.com/v1/executions \
     -H <span class="c-str">"X-API-Key: klx_…"</span> \
     -d <span class="c-str">'{
       "target": { "url": "https://api.stripe.com/v1/refunds",

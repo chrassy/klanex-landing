@@ -1,0 +1,773 @@
+openapi: 3.1.0
+info:
+  title: klanex API
+  version: 0.7.0
+  description: |
+    Tool orchestration engine for AI agents. Submit tool-use intents for
+    reliable asynchronous execution: schema gating, retries with backoff,
+    circuit breakers, encrypted credentials, human-in-the-loop approvals,
+    replay, and HMAC-signed webhooks.
+
+    Prose companion: docs/api.md. Client SDKs: klanex-js (@klanex/sdk),
+    klanex-python (klanex).
+servers:
+  - url: https://your-klanex-ingest.example.com
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /v1/executions:
+    post:
+      operationId: createExecution
+      summary: Submit a tool-use intent for asynchronous execution
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateExecutionRequest" }
+      responses:
+        "202":
+          description: Validated and queued (or paused in PENDING_APPROVAL).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AcceptedResponse" }
+        "200":
+          description: >
+            Idempotent replay: this idempotency_key was already used; the
+            original execution is returned with its current status. Nothing
+            was re-queued.
+          headers:
+            X-Klanex-Idempotent-Replay:
+              schema: { type: string, enum: ["true"] }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AcceptedResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "422":
+          description: >
+            Payload failed the JSON Schema gate. Feed error.llm_hint back to
+            the agent and resubmit.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "502": { $ref: "#/components/responses/EnqueueFailed" }
+    get:
+      operationId: listExecutions
+      summary: List the tenant's executions, newest first
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/ExecutionStatus" }
+        - name: since
+          in: query
+          description: Inclusive lower bound on created_at.
+          schema: { type: string, format: date-time }
+        - name: until
+          in: query
+          description: Exclusive upper bound on created_at.
+          schema: { type: string, format: date-time }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: cursor
+          in: query
+          description: Opaque cursor from a previous response's next_cursor.
+          schema: { type: string }
+      responses:
+        "200":
+          description: A page of executions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  executions:
+                    type: array
+                    items: { $ref: "#/components/schemas/Execution" }
+                  next_cursor:
+                    type: string
+                    description: Present only when the page was full.
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /v1/executions/{id}:
+    get:
+      operationId: getExecution
+      summary: Fetch current execution state (credentials always redacted)
+      parameters: [{ $ref: "#/components/parameters/ExecutionID" }]
+      responses:
+        "200":
+          description: Current state.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Execution" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /v1/executions/{id}/replay:
+    post:
+      operationId: replayExecution
+      summary: Re-run a terminal execution byte-exact as a new execution
+      description: >
+        Clones target, byte-exact payload, and sealed credentials with a
+        fresh attempt counter. Replays of approval-gated executions pause
+        in PENDING_APPROVAL again. Not idempotent by design.
+      parameters: [{ $ref: "#/components/parameters/ExecutionID" }]
+      responses:
+        "202":
+          description: Clone created (QUEUED, or PENDING_APPROVAL if gated).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReplayResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Execution is not in a terminal state (NOT_TERMINAL).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "502": { $ref: "#/components/responses/EnqueueFailed" }
+
+  /v1/replays:
+    post:
+      operationId: bulkReplay
+      summary: Bulk-replay FAILED executions matching a filter
+      description: >
+        Outage recovery. TARGET_REJECTED and SCHEMA_INVALID failures are
+        skipped unless include_rejected is true (their payloads would fail
+        identically). Max 100 per call; repeat to drain more.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                since: { type: string, format: date-time }
+                until: { type: string, format: date-time }
+                limit: { type: integer, minimum: 1, maximum: 100, default: 50 }
+                include_rejected: { type: boolean, default: false }
+      responses:
+        "200":
+          description: Summary of the bulk operation.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  replayed: { type: integer }
+                  skipped: { type: integer }
+                  enqueue_failed: { type: integer }
+                  executions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        execution_id: { type: string }
+                        replay_of: { type: string }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /v1/executions/{id}/approve:
+    post:
+      operationId: approveExecution
+      summary: Approve a PENDING_APPROVAL execution (moves to QUEUED)
+      parameters: [{ $ref: "#/components/parameters/ExecutionID" }]
+      requestBody: { $ref: "#/components/requestBodies/Decision" }
+      responses:
+        "200":
+          description: Approved and queued.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AcceptedResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/NotPending" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "502": { $ref: "#/components/responses/EnqueueFailed" }
+
+  /v1/executions/{id}/reject:
+    post:
+      operationId: rejectExecution
+      summary: Reject a PENDING_APPROVAL execution (terminal APPROVAL_REJECTED)
+      parameters: [{ $ref: "#/components/parameters/ExecutionID" }]
+      requestBody: { $ref: "#/components/requestBodies/Decision" }
+      responses:
+        "200":
+          description: Rejected; execution.failed webhook fired.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AcceptedResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/NotPending" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /v1/integrations:
+    get:
+      operationId: getIntegrations
+      summary: Integration configuration state (never secrets)
+      responses:
+        "200":
+          description: Which integrations are configured.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  slack:
+                    type: object
+                    properties:
+                      configured: { type: boolean }
+                      notify_on_failure: { type: boolean }
+                  jira:
+                    type: object
+                    properties:
+                      configured: { type: boolean }
+                      project_key: { type: string }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /v1/api-key/rotate:
+    post:
+      operationId: rotateAPIKey
+      summary: Rotate this tenant's API key
+      description: >
+        Mints a new API key and immediately invalidates the current one.
+        Authenticate with the current key; the response is the only place the
+        new raw key is returned (only its SHA-256 is stored).
+      responses:
+        "200":
+          description: A new API key. Store it now — it is shown only once.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tenant_id: { type: string }
+                  api_key: { type: string }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /v1/webhook-secret/rotate:
+    post:
+      operationId: rotateWebhookSecret
+      summary: Rotate this tenant's webhook signing secret
+      description: >
+        Mints a new secret used to HMAC-sign outbound callbacks. Callbacks
+        sent after rotation are signed with the new secret, so update your
+        verifier. The secret is returned only in this response.
+      responses:
+        "200":
+          description: A new webhook secret. Store it now — it is shown only once.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tenant_id: { type: string }
+                  webhook_secret: { type: string }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /v1/integrations/slack:
+    put:
+      operationId: putSlackIntegration
+      summary: Configure Slack approvals and failure alerts
+      description: >
+        Secrets are KMS-sealed at rest. Point your Slack app's Interactivity
+        Request URL at POST /integrations/slack/actions to make the
+        Approve/Reject buttons work.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [webhook_url, signing_secret]
+              properties:
+                webhook_url:
+                  type: string
+                  format: uri
+                  description: Slack incoming-webhook URL (https://hooks.slack.com/...).
+                signing_secret:
+                  type: string
+                  description: Slack app signing secret, used to verify button callbacks.
+                notify_on_failure:
+                  type: boolean
+                  default: false
+      responses:
+        "200": { description: Stored (sealed). }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    delete:
+      operationId: deleteSlackIntegration
+      summary: Remove the Slack integration
+      responses:
+        "200": { description: Removed. }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /v1/integrations/jira:
+    put:
+      operationId: putJiraIntegration
+      summary: Configure Jira issue filing for terminal failures
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [base_url, email, api_token, project_key]
+              properties:
+                base_url:
+                  type: string
+                  format: uri
+                  description: Atlassian site root, e.g. https://yourco.atlassian.net.
+                email: { type: string }
+                api_token: { type: string }
+                project_key: { type: string }
+                issue_type: { type: string, default: Task }
+      responses:
+        "200": { description: Stored (sealed). }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    delete:
+      operationId: deleteJiraIntegration
+      summary: Remove the Jira integration
+      responses:
+        "200": { description: Removed. }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /integrations/slack/actions:
+    post:
+      operationId: slackAction
+      summary: Slack interactivity callback (Approve/Reject buttons)
+      description: >
+        Called by Slack, not by API clients — there is no API-key auth.
+        Trust comes from Slack's v0 request signature (X-Slack-Signature
+        over "v0:<X-Slack-Request-Timestamp>:<body>", 5-minute replay
+        window) verified against the tenant's sealed signing secret.
+        Drives the same approve/reject flow as the API and records
+        "via Slack by @username" in the audit trail.
+      security: []
+      parameters:
+        - name: X-Slack-Request-Timestamp
+          in: header
+          required: true
+          schema: { type: string }
+        - name: X-Slack-Signature
+          in: header
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                payload:
+                  type: string
+                  description: URL-encoded Slack block_actions JSON.
+      responses:
+        "200": { description: Action processed (or acknowledged as not-for-us). }
+        "400": { description: Malformed callback. }
+        "401": { description: Signature verification failed. }
+
+  /v1/connections:
+    post:
+      operationId: createConnection
+      summary: Create a vault connection (managed credential)
+      description: >
+        Store a credential once and reference it by connection_id on a
+        target, instead of passing raw headers. Secrets are KMS-sealed;
+        OAuth tokens are refreshed automatically at execution time.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [provider, grant_type]
+              properties:
+                provider:
+                  type: string
+                  description: Label; known values (github, google, slack, hubspot, salesforce, stripe) auto-fill OAuth endpoints.
+                grant_type:
+                  type: string
+                  enum: [static_bearer, oauth2_client_credentials, oauth2_authorization_code]
+                token: { type: string, description: static_bearer only. }
+                client_id: { type: string, description: oauth2 grants. }
+                client_secret: { type: string, description: oauth2 grants. }
+                authorize_url: { type: string, format: uri }
+                token_url: { type: string, format: uri }
+                scopes: { type: array, items: { type: string } }
+                inject_header: { type: string, default: Authorization }
+                token_prefix: { type: string, default: "Bearer " }
+      responses:
+        "201":
+          description: >
+            Created. For oauth2_authorization_code the response includes an
+            authorize_url to open in a browser for consent.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Connection" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    get:
+      operationId: listConnections
+      summary: List the tenant's connections (never returns secrets)
+      responses:
+        "200":
+          description: Connections.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  connections:
+                    type: array
+                    items: { $ref: "#/components/schemas/Connection" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /v1/connections/{id}:
+    get:
+      operationId: getConnection
+      summary: Fetch a connection (no secrets)
+      parameters: [{ $ref: "#/components/parameters/ConnectionID" }]
+      responses:
+        "200":
+          description: Connection.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Connection" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    delete:
+      operationId: deleteConnection
+      summary: Remove a connection
+      parameters: [{ $ref: "#/components/parameters/ConnectionID" }]
+      responses:
+        "200": { description: Deleted. }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /v1/connections/{id}/authorize:
+    get:
+      operationId: authorizeConnection
+      summary: Begin OAuth consent for an authorization-code connection
+      description: >
+        302-redirects the operator's browser to the provider's consent
+        screen. The return trip lands on /v1/connections/callback.
+      parameters: [{ $ref: "#/components/parameters/ConnectionID" }]
+      responses:
+        "302": { description: Redirect to the provider consent screen. }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Connection does not use the authorize flow (NOT_AUTHORIZABLE). }
+
+  /v1/connections/callback:
+    get:
+      operationId: oauthCallback
+      summary: OAuth redirect target (provider → klanex)
+      description: >
+        Not API-key authenticated; trust comes from the one-time state
+        planted on the connection. Exchanges the code for tokens and shows
+        an HTML result page.
+      security: []
+      parameters:
+        - name: code
+          in: query
+          schema: { type: string }
+        - name: state
+          in: query
+          schema: { type: string }
+      responses:
+        "200": { description: Consent completed; connection is connected. }
+        "400": { description: Missing/invalid code or state. }
+
+  /dashboard/:
+    get:
+      operationId: dashboard
+      summary: Observability dashboard (embedded static UI)
+      description: >
+        Serves the single-page dashboard. No server-side auth here — the
+        browser calls the /v1 endpoints with a tenant API key the operator
+        enters (stored in localStorage, sent as X-API-Key). Bare /dashboard
+        301-redirects here.
+      security: []
+      responses:
+        "200": { description: HTML/JS/CSS assets. }
+
+  /healthz:
+    get:
+      operationId: health
+      summary: Liveness probe
+      security: []
+      responses:
+        "200": { description: ok }
+
+webhooks:
+  executionEvent:
+    post:
+      summary: Signed event delivered to the execution's callback_url
+      description: |
+        Events: execution.pending_approval (awaiting a human decision),
+        execution.completed, execution.failed. Verify the signature before
+        trusting the body: X-Klanex-Signature = "sha256=" +
+        hex(HMAC-SHA256(webhook_secret, "<X-Klanex-Timestamp>.<raw body>")).
+        Reject stale timestamps (default tolerance 300s). Respond 2xx;
+        5xx responses are retried 3 times with backoff.
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WebhookEvent" }
+      responses:
+        "200": { description: Acknowledged. }
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: Tenant API key ("klx_...") issued at onboarding.
+
+  parameters:
+    ExecutionID:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+      example: exe_9b1c2f6a-...
+    ConnectionID:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+      example: con_9b1c2f6a-...
+
+  requestBodies:
+    Decision:
+      required: false
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              reason: { type: string }
+
+  responses:
+    BadRequest:
+      description: Malformed request (bad URL, unsupported method, invalid JSON, bad filter).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Unauthenticated:
+      description: Missing or invalid X-API-Key.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    NotFound:
+      description: No such execution for this tenant.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    NotPending:
+      description: Execution is not PENDING_APPROVAL (NOT_PENDING).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    RateLimited:
+      description: Per-tenant rate limit exceeded; retry after Retry-After seconds.
+      headers:
+        Retry-After:
+          schema: { type: string }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    EnqueueFailed:
+      description: Persisted but could not be enqueued; safe to retry the request.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  schemas:
+    ExecutionStatus:
+      type: string
+      enum: [PENDING_APPROVAL, QUEUED, RUNNING, RETRYING, SUCCEEDED, FAILED]
+
+    ErrorCode:
+      type: string
+      enum:
+        - SCHEMA_INVALID
+        - TARGET_TIMEOUT
+        - TARGET_RATE_LIMITED
+        - TARGET_UNAVAILABLE
+        - TARGET_REJECTED
+        - CIRCUIT_OPEN
+        - ATTEMPTS_EXHAUSTED
+        - APPROVAL_REJECTED
+        - CONNECTION_UNAUTHORIZED
+        - INTERNAL
+
+    Target:
+      type: object
+      required: [url]
+      properties:
+        method:
+          type: string
+          enum: [GET, POST, PUT, PATCH, DELETE]
+          default: POST
+        url:
+          type: string
+          format: uri
+          description: Absolute http(s) URL of the third-party API.
+        headers:
+          type: object
+          additionalProperties: { type: string }
+          description: >
+            Your third-party credentials. Encrypted at rest; values are
+            REDACTED in all reads.
+        connection_id:
+          type: string
+          description: >
+            Reference a vault connection; its managed token is injected at
+            execution time instead of passing credentials in headers.
+        timeout_ms:
+          type: integer
+          default: 30000
+          maximum: 120000
+          description: Per-attempt timeout.
+
+    Connection:
+      type: object
+      description: Secret-free view of a vault connection.
+      properties:
+        connection_id: { type: string }
+        provider: { type: string }
+        grant_type:
+          type: string
+          enum: [static_bearer, oauth2_client_credentials, oauth2_authorization_code]
+        status: { type: string, enum: [pending, connected, error] }
+        inject_header: { type: string }
+        scopes: { type: array, items: { type: string } }
+        expires_at: { type: string, format: date-time }
+        authorize_url:
+          type: string
+          description: Present on create for authorization-code connections.
+        last_error: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    CreateExecutionRequest:
+      type: object
+      required: [target]
+      properties:
+        target: { $ref: "#/components/schemas/Target" }
+        payload:
+          description: Agent-generated JSON body; stored byte-exact for replay.
+        payload_schema:
+          description: JSON Schema; failing payloads are rejected with 422 + llm_hint.
+        callback_url: { type: string, format: uri }
+        max_attempts: { type: integer, minimum: 1, maximum: 10, default: 5 }
+        idempotency_key:
+          type: string
+          maxLength: 255
+          description: Tenant-scoped; duplicate submits return the original execution.
+        requires_approval:
+          type: boolean
+          default: false
+          description: Pause in PENDING_APPROVAL until /approve or /reject.
+
+    AcceptedResponse:
+      type: object
+      properties:
+        execution_id: { type: string }
+        status: { $ref: "#/components/schemas/ExecutionStatus" }
+
+    ReplayResponse:
+      type: object
+      properties:
+        execution_id: { type: string }
+        status: { $ref: "#/components/schemas/ExecutionStatus" }
+        replay_of: { type: string }
+
+    ExecError:
+      type: object
+      properties:
+        code: { $ref: "#/components/schemas/ErrorCode" }
+        message: { type: string }
+        llm_hint:
+          type: string
+          description: Paste into the agent's context for self-correction.
+
+    ExecutionResult:
+      type: object
+      properties:
+        status_code: { type: integer }
+        body:
+          type: string
+          description: Target response body, truncated to 64 KiB.
+
+    Approval:
+      type: object
+      properties:
+        decision: { type: string, enum: [approved, rejected] }
+        reason: { type: string }
+        decided_at: { type: string, format: date-time }
+
+    Execution:
+      type: object
+      properties:
+        execution_id: { type: string }
+        status: { $ref: "#/components/schemas/ExecutionStatus" }
+        attempts: { type: integer }
+        max_attempts: { type: integer }
+        target: { $ref: "#/components/schemas/Target" }
+        callback_url: { type: string }
+        result: { $ref: "#/components/schemas/ExecutionResult" }
+        error: { $ref: "#/components/schemas/ExecError" }
+        replay_of: { type: string }
+        requires_approval: { type: boolean }
+        approval: { $ref: "#/components/schemas/Approval" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            problems:
+              type: array
+              items: { type: string }
+            llm_hint: { type: string }
+
+    WebhookEvent:
+      type: object
+      properties:
+        event:
+          type: string
+          enum: [execution.pending_approval, execution.completed, execution.failed]
+        execution_id: { type: string }
+        status: { $ref: "#/components/schemas/ExecutionStatus" }
+        attempts: { type: integer }
+        result: { $ref: "#/components/schemas/ExecutionResult" }
+        error: { $ref: "#/components/schemas/ExecError" }

@@ -12,13 +12,16 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+  <link rel="icon" href="logo.png" />
 </head>
 <body>
 
 <nav class="nav">
   <div class="container nav-inner">
-    <a class="wordmark" href="#top">klanex<span class="wordmark-dot">_</span></a>
+    <a class="wordmark" href="#top">
+      <img src="logo.png" alt="klanex logo" class="wordmark-logo" />
+      klanex<span class="wordmark-dot">_</span>
+    </a>
     <div class="nav-links">
       <a href="#how">How it works</a>
       <a href="#features">Features</a>
@@ -304,7 +307,10 @@ klanex = <span class="c-fn">Klanex</span>(api_key=API_KEY, base_url=BASE_URL)
 
 <footer class="footer">
   <div class="container footer-inner">
-    <span class="wordmark wordmark-sm">klanex<span class="wordmark-dot">_</span></span>
+    <span class="wordmark wordmark-sm">
+      <img src="logo.png" alt="klanex logo" class="wordmark-logo" />
+      klanex<span class="wordmark-dot">_</span>
+    </span>
     <div class="footer-links">
       <a href="openapi.yaml" target="_blank" rel="noopener">API reference</a>
       <a href="https://github.com/chrassy/klanex-js" target="_blank" rel="noopener">TypeScript SDK</a>

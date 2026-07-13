@@ -29,7 +29,7 @@
       <a href="#code">Code</a>
       <a href="#pricing">Pricing</a>
     </div>
-    <a class="btn btn-primary btn-sm" href="#cta">Request early access</a>
+    <a class="btn btn-primary btn-sm" href="https://api.klanexai.com/signup/">Get API key</a>
   </div>
 </nav>
 
@@ -45,7 +45,7 @@
       hallucinated JSON key or a rate limit never crashes your workflow.
     </p>
     <div class="hero-actions">
-      <a class="btn btn-primary" href="#cta">Request early access</a>
+      <a class="btn btn-primary" href="https://api.klanexai.com/signup/">Start free</a>
       <a class="btn btn-ghost" href="#code">See the code →</a>
     </div>
 
@@ -255,40 +255,56 @@ klanex = <span class="c-fn">Klanex</span>(api_key=API_KEY, base_url=BASE_URL)
 <section class="section" id="pricing">
   <div class="container">
     <h2 class="section-title">Pay for reliability,<br /><span class="grad">not for tokens</span></h2>
-    <p class="section-sub">No inference markup, no seat licenses. You're charged when klanex successfully executes on your behalf.</p>
-    <div class="grid grid-3 pricing-grid">
+    <p class="section-sub">Flat monthly plans with generous execution volume — no inference markup, no seat licenses. You pay per execution; retries and schema-rejected payloads are always free.</p>
+    <div class="grid pricing-grid">
       <div class="card price-card">
-        <h3>Developer</h3>
-        <div class="price">$0</div>
-        <p class="price-note">while in early access</p>
+        <h3>Free</h3>
+        <div class="price">$0<span>/mo</span></div>
+        <p class="price-note">For trying klanex.</p>
         <ul>
-          <li>Full engine: schema gate, retries, replay</li>
-          <li>Signed webhooks &amp; audit trail</li>
-          <li>Community support</li>
+          <li>1,000 executions / month</li>
+          <li>7-day execution history</li>
+          <li>Up to 5 retries per call</li>
+          <li>2 requests / second</li>
         </ul>
+        <a class="btn btn-ghost btn-sm" href="https://api.klanexai.com/signup/">Start free</a>
+      </div>
+      <div class="card price-card">
+        <h3>Starter</h3>
+        <div class="price">$29<span>/mo</span></div>
+        <p class="price-note">Your first agent in production.</p>
+        <ul>
+          <li>20,000 executions / month</li>
+          <li>Execution replay</li>
+          <li>30-day history</li>
+          <li>Up to 10 retries · 10 req/s</li>
+        </ul>
+        <a class="btn btn-ghost btn-sm" href="https://api.klanexai.com/signup/">Start</a>
       </div>
       <div class="card price-card price-featured">
         <div class="price-badge">Most popular</div>
-        <h3>Scale</h3>
-        <div class="price">per execution</div>
-        <p class="price-note">fractions of a cent per successful call</p>
+        <h3>Pro</h3>
+        <div class="price">$99<span>/mo</span></div>
+        <p class="price-note">Agents doing real volume.</p>
         <ul>
-          <li>Everything in Developer</li>
-          <li>Slack approvals &amp; Jira escalation</li>
-          <li>Custom rate limits per key</li>
-          <li>KMS credential vault</li>
+          <li>200,000 executions / month</li>
+          <li>Execution replay</li>
+          <li>90-day history</li>
+          <li>Up to 10 retries · 50 req/s</li>
         </ul>
+        <a class="btn btn-primary btn-sm" href="https://api.klanexai.com/signup/">Start</a>
       </div>
       <div class="card price-card">
         <h3>Enterprise</h3>
-        <div class="price">Let's talk</div>
-        <p class="price-note">for teams putting agents near money</p>
+        <div class="price">Custom</div>
+        <p class="price-note">For teams putting agents near money.</p>
         <ul>
-          <li>99.99% uptime SLA</li>
-          <li>Dedicated queue partitions</li>
-          <li>Isolated execution environments</li>
-          <li>Compliance exports</li>
+          <li>Volume execution pricing</li>
+          <li>SSO &amp; custom SLA</li>
+          <li>Custom data retention</li>
+          <li>Priority support</li>
         </ul>
+        <a class="btn btn-ghost btn-sm" href="mailto:sales@klanexai.com?subject=klanex%20Enterprise">Contact sales</a>
       </div>
     </div>
   </div>
@@ -297,9 +313,9 @@ klanex = <span class="c-fn">Klanex</span>(api_key=API_KEY, base_url=BASE_URL)
 <section class="section section-cta" id="cta">
   <div class="container cta-box">
     <h2>Stop babysitting your agents' API calls.</h2>
-    <p>klanex is in early access — we're onboarding design partners now.</p>
+    <p>Start free — 1,000 executions a month, the full reliability engine, no credit card to explore.</p>
     <div class="hero-actions">
-      <a class="btn btn-primary" href="mailto:aljaz.klanecek@gmail.com?subject=klanex%20early%20access">Request early access</a>
+      <a class="btn btn-primary" href="https://api.klanexai.com/signup/">Get your API key</a>
       <a class="btn btn-ghost" href="https://github.com/chrassy/klanex-js" target="_blank" rel="noopener">Explore the SDK →</a>
     </div>
   </div>

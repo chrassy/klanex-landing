@@ -205,14 +205,16 @@ h1 {
 .brand-logo { width: 21px; height: 21px; display: block; }
 
 /* ── pricing ─────────────────────────────────────────────────────────── */
-.pricing-grid { align-items: stretch; }
+.pricing-grid { grid-template-columns: repeat(4, 1fr); align-items: stretch; }
 .price-card { display: flex; flex-direction: column; position: relative; }
-.price-card ul { list-style: none; margin-top: 18px; }
+.price-card ul { list-style: none; margin-top: 18px; margin-bottom: 24px; }
 .price-card li { color: var(--muted); font-size: 14px; padding: 5px 0 5px 24px; position: relative; }
 .price-card li::before {
   content: "✓"; position: absolute; left: 0; color: var(--accent-2); font-weight: 700;
 }
+.price-card .btn { margin-top: auto; text-align: center; }
 .price { font-size: 30px; font-weight: 800; margin-top: 12px; letter-spacing: -0.02em; }
+.price span { font-size: 14px; font-weight: 600; color: var(--muted); letter-spacing: 0; }
 .price-note { color: var(--muted); font-size: 13px; margin-top: 2px; }
 .price-featured { border-color: rgba(124, 92, 255, 0.5); box-shadow: 0 0 40px rgba(124, 92, 255, 0.12); }
 .price-badge {
@@ -242,12 +244,14 @@ h1 {
 /* ── responsive ──────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
   .grid-3 { grid-template-columns: 1fr 1fr; }
+  .pricing-grid { grid-template-columns: 1fr 1fr; }
   .flow { flex-direction: column; }
   .flow-arrow { transform: rotate(90deg); padding: 2px 0; }
   .nav-links { display: none; }
 }
 @media (max-width: 600px) {
   .grid-3 { grid-template-columns: 1fr; }
+  .pricing-grid { grid-template-columns: 1fr; }
   .hero { padding: 80px 0 60px; }
   .terminal-body { font-size: 11.5px; }
   .footer-inner { flex-direction: column; gap: 12px; }

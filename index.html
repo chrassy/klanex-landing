@@ -13,6 +13,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="icon" href="logo.png" />
+  <!-- Cloudflare Web Analytics — cookieless, no personal data, no consent
+       banner needed. Replace the token with your own from the Cloudflare
+       dashboard (Analytics & Logs → Web Analytics → Add a site → JS snippet). -->
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "b17b87f9cb544782b28a4e8b9606c09d"}'></script>
 </head>
 <body>
 
@@ -26,6 +30,7 @@
       <a href="#how">How it works</a>
       <a href="#features">Features</a>
       <a href="#integrations">Integrations</a>
+      <a href="#mcp">MCP</a>
       <a href="#code">Code</a>
       <a href="#pricing">Pricing</a>
       <a href="docs/">Docs</a>
@@ -194,7 +199,45 @@
   </div>
 </section>
 
-<section class="section section-alt" id="code">
+<section class="section section-alt" id="mcp">
+  <div class="container">
+    <p class="hero-eyebrow" style="text-align:center"><span class="pill">Model Context Protocol</span></p>
+    <h2 class="section-title">Adopt klanex from inside<br /><span class="grad">your agent — over MCP</span></h2>
+    <p class="section-sub">klanex is a Model Context Protocol server. Point any MCP-capable client — Claude Code, Claude Desktop, Cursor, VS Code, Windsurf — at the hosted endpoint and your agent gets the whole reliability engine as native tools. No SDK, no glue code.</p>
+
+    <div class="terminal" role="img" aria-label="Adding klanex as an MCP server">
+      <div class="terminal-bar">
+        <span class="tdot tdot-r"></span><span class="tdot tdot-y"></span><span class="tdot tdot-g"></span>
+        <span class="terminal-title">agent ← klanex over MCP</span>
+      </div>
+      <pre class="terminal-body"><code><span class="t-dim">$</span> <span class="t-cmd">claude mcp add --transport http klanex https://api.klanexai.com/mcp \</span>
+<span class="t-cmd">      --header "X-API-Key: klx_…"</span>
+
+<span class="t-dim"># your agent can now call, as native tools:</span>
+<span class="t-ok">execute</span>  <span class="t-ok">get_execution</span>  <span class="t-ok">list_executions</span>  <span class="t-ok">replay_execution</span>  <span class="t-ok">get_usage</span>  <span class="t-ok">list_connections</span>
+
+<span class="t-dim">$</span> <span class="t-cmd">npx -y klanex-mcp</span>   <span class="t-dim"># stdio, for Claude Desktop and other stdio-only clients</span></code></pre>
+    </div>
+
+    <div class="grid grid-3">
+      <div class="card">
+        <h3>The full reliability loop</h3>
+        <p>Six tools cover submit, poll, list, replay, usage, and stored credentials — every guarantee from the REST API, callable by the model itself.</p>
+      </div>
+      <div class="card">
+        <h3>Errors the agent fixes itself</h3>
+        <p>A schema-rejected payload returns as a tool error carrying the <code>llm_hint</code>, so the model self-corrects without ever leaving the conversation.</p>
+      </div>
+      <div class="card">
+        <h3>Zero-install or npm</h3>
+        <p>Use the hosted Streamable HTTP endpoint directly, or <code>npx -y klanex-mcp</code> for stdio-only clients. Free sandbox keys to try it end to end.</p>
+      </div>
+    </div>
+    <p class="section-sub" style="margin-top:26px;margin-bottom:0">Listed on the <a class="inline-link" href="https://registry.modelcontextprotocol.io" target="_blank" rel="noopener">official MCP Registry</a> · <a class="inline-link" href="https://www.npmjs.com/package/klanex-mcp" target="_blank" rel="noopener">npm</a> · <a class="inline-link" href="https://github.com/chrassy/klanex-mcp" target="_blank" rel="noopener">GitHub</a></p>
+  </div>
+</section>
+
+<section class="section" id="code">
   <div class="container">
     <h2 class="section-title">Three lines to production-ready</h2>
     <p class="section-sub">Official SDKs for TypeScript and Python, or plain HTTP from anything else. The 422 self-correction loop comes free.</p>
@@ -326,8 +369,10 @@ klanex = <span class="c-fn">Klanex</span>(api_key=API_KEY, base_url=BASE_URL)
     <div class="footer-links">
       <a href="docs/">Docs</a>
       <a href="https://api.klanexai.com/openapi.yaml" target="_blank" rel="noopener">API reference</a>
+      <a href="https://github.com/chrassy/klanex-mcp" target="_blank" rel="noopener">MCP server</a>
       <a href="https://github.com/chrassy/klanex-js" target="_blank" rel="noopener">TypeScript SDK</a>
       <a href="https://github.com/chrassy/klanex-python" target="_blank" rel="noopener">Python SDK</a>
+      <a href="privacy.html">Privacy</a>
     </div>
     <span class="footer-copy">© 2026 klanex</span>
   </div>

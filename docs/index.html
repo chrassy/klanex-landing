@@ -9,6 +9,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="icon" href="../logo.png" />
+  <!-- Cloudflare Web Analytics — cookieless, no consent banner needed. -->
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "b17b87f9cb544782b28a4e8b9606c09d"}'></script>
   <style>
     :root {
       --bg: #08080d; --panel: #12121c; --border: rgba(255,255,255,0.09);
@@ -80,6 +82,7 @@
   <a href="#webhooks">Webhooks</a>
   <a href="#errors">Error codes</a>
   <span class="toc-h">Platform</span>
+  <a href="#mcp">MCP server</a>
   <a href="#vault">Token vault</a>
   <a href="#integrations">Slack &amp; Jira</a>
   <a href="#rotation">Credential rotation</a>
@@ -217,6 +220,42 @@ GET    /v1/connections/{id}/authorize     begin OAuth consent (browser)</code></
 <p><span class="pill post">POST</span> <code>/v1/api-key/rotate</code> — new key returned once; the old key stops working immediately.</p>
 <p><span class="pill post">POST</span> <code>/v1/webhook-secret/rotate</code> — callbacks after rotation are signed with the new secret; update your verifier.</p>
 <p>Both are also one click in the dashboard under <strong>Credentials</strong>.</p>
+
+<h2 id="mcp">MCP server</h2>
+<p>Agents can drive klanex over the <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">Model Context Protocol</a> instead of raw REST. The <code>/mcp</code> endpoint (Streamable HTTP) lives on the same hosts as the API:</p>
+<table>
+  <thead><tr><th>Endpoint</th><th>Environment</th><th>Keys</th></tr></thead>
+  <tbody>
+    <tr><td><code>https://api.klanexai.com/mcp</code></td><td>production</td><td><code>klx_live_…</code></td></tr>
+    <tr><td><code>https://api.sandbox.klanexai.com/mcp</code></td><td>sandbox (free)</td><td><code>klx_test_…</code></td></tr>
+  </tbody>
+</table>
+<p>Authenticate with the same API key, sent as either an <code>X-API-Key</code> header or <code>Authorization: Bearer klx_…</code> (for clients that can only set an Authorization header). Add it to Claude Code:</p>
+<pre><code>claude mcp add --transport http klanex https://api.klanexai.com/mcp \
+  --header "X-API-Key: klx_live_…"</code></pre>
+<p>For stdio-only clients (e.g. Claude Desktop), use the npm shim — it proxies to the hosted endpoint and routes <code>klx_test_…</code> keys to the sandbox automatically:</p>
+<pre><code>{
+  "mcpServers": {
+    "klanex": {
+      "command": "npx",
+      "args": ["-y", "klanex-mcp"],
+      "env": { "KLANEX_API_KEY": "klx_live_…" }
+    }
+  }
+}</code></pre>
+<p>Six tools are exposed. They proxy to the REST endpoints above in-process, so validation, the schema gate, quota, rate limits, idempotency, and credential sealing behave identically — and errors surface as tool errors carrying the same <code>llm_hint</code>, so the agent self-corrects.</p>
+<table>
+  <thead><tr><th>Tool</th><th>Does</th></tr></thead>
+  <tbody>
+    <tr><td><code>execute</code></td><td>Submit an intent; optional <code>wait_seconds</code> (≤55) blocks for the terminal result.</td></tr>
+    <tr><td><code>get_execution</code></td><td>Status, attempts, result, or classified error for one execution.</td></tr>
+    <tr><td><code>list_executions</code></td><td>The account's executions, filterable by status and time, paginated.</td></tr>
+    <tr><td><code>replay_execution</code></td><td>Re-run a terminal execution byte-exact — outage recovery without re-prompting.</td></tr>
+    <tr><td><code>get_usage</code></td><td>Plan and current-month usage/quota.</td></tr>
+    <tr><td><code>list_connections</code></td><td>Stored credential connections to reference via <code>connection_id</code>.</td></tr>
+  </tbody>
+</table>
+<div class="callout">klanex is listed on the <a href="https://registry.modelcontextprotocol.io" target="_blank" rel="noopener">official MCP Registry</a> as <code>io.github.chrassy/klanex</code>, on <a href="https://www.npmjs.com/package/klanex-mcp" target="_blank" rel="noopener">npm</a>, and on <a href="https://github.com/chrassy/klanex-mcp" target="_blank" rel="noopener">GitHub</a>.</div>
 
 <h2 id="sdks">SDKs</h2>
 <ul>

@@ -38,18 +38,18 @@
     <h1>Privacy note</h1>
     <p class="sub">How this website uses analytics. Last updated July 2026.</p>
 
-    <h2>Analytics, only after you consent</h2>
-    <p>klanexai.com uses <strong>Google Analytics 4</strong> to understand how the site is used — which pages and referrers bring people in, so we can improve the site. Nothing loads and no data is sent until you click <strong>Accept</strong> on the consent banner. If you decline, no analytics run at all.</p>
+    <h2>Cookieless analytics</h2>
+    <p>klanexai.com uses <strong>Cloudflare Web Analytics</strong> to understand how the site is used — which pages and referrers bring people in, so we can improve the site. It is privacy-first by design: <strong>no cookies</strong>, no <code>localStorage</code>, no fingerprinting, and no cross-site tracking. Because it stores nothing on your device and collects no personal data, there is no consent banner to click through.</p>
 
-    <h2>What is collected (after consent)</h2>
+    <h2>What is collected</h2>
     <ul>
-      <li>Standard web-analytics events: pages viewed, referrer/source, approximate location (country/region), device and browser type.</li>
-      <li>Google Analytics sets cookies in your browser to measure repeat visits. IP addresses are anonymized (<code>anonymize_ip</code>).</li>
-      <li>Google processes this data as our analytics provider. See Google's <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">privacy policy</a>.</li>
+      <li>Aggregate, anonymous page metrics: pages viewed, referrer/source, and coarse device and country information — never tied to an individual or a persistent identifier.</li>
+      <li>No advertising profiles, no data sold or shared, nothing that follows you to other sites.</li>
+      <li>Cloudflare processes this as our analytics provider. See Cloudflare's <a href="https://www.cloudflare.com/web-analytics/" target="_blank" rel="noopener">Web Analytics</a> and <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">privacy policy</a>.</li>
     </ul>
 
-    <h2>Withdrawing consent</h2>
-    <p>Your choice is stored locally in your browser. To change it, clear this site's data (or the <code>klanex_analytics_consent</code> entry in local storage) and the banner will appear again. You can also block analytics with a browser extension or your browser's tracking-prevention settings.</p>
+    <h2>Opting out</h2>
+    <p>There is nothing to opt out of storage-wise, but you can block the analytics beacon with any browser extension or your browser's tracking-prevention settings if you prefer.</p>
 
     <h2>The product is separate</h2>
     <p>This note covers the marketing website only. Data you send to the klanex API (executions, payloads, credentials) is governed by the product's terms and is never fed into website analytics. Credentials are encrypted at rest and never exposed in reads.</p>

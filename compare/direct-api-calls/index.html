@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calling APIs directly from your AI agent vs. klanex</title>
+  <meta name="description" content="Letting an agent call production APIs directly breaks in predictable ways — hallucinated payloads, timeouts, naked credentials, double-executions. klanex is the reliability layer in between: schema gate, retries, idempotency, a credential vault, approvals, and replay." />
+  <meta property="og:title" content="Direct API calls vs. klanex" />
+  <meta property="og:description" content="The simplest thing an agent can do is call the API itself — and it's where agentic workflows break first. Here's what changes with klanex in between." />
+  <meta property="og:type" content="article" />
+  <link rel="canonical" href="https://klanexai.com/compare/direct-api-calls/" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../styles.css" />
+  <link rel="icon" href="../../logo.png" />
+  <!-- Cloudflare Web Analytics — cookieless, no consent banner needed. -->
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "b17b87f9cb544782b28a4e8b9606c09d"}'></script>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container nav-inner">
+    <a class="wordmark" href="/">
+      <img src="../../logo.png" alt="klanex logo" class="wordmark-logo" />
+      klanex<span class="wordmark-dot">_</span>
+    </a>
+    <div class="nav-links">
+      <a href="/#how">How it works</a>
+      <a href="/#features">Features</a>
+      <a href="/compare/">Compare</a>
+      <a href="/docs/">Docs</a>
+      <a href="/#pricing">Pricing</a>
+    </div>
+    <a class="btn btn-primary btn-sm" href="https://api.klanexai.com/signup/">Get API key</a>
+  </div>
+</nav>
+
+<header class="page-head">
+  <div class="container">
+    <p class="hero-eyebrow"><span class="pill">Comparison</span></p>
+    <h1>Direct API calls vs. <span class="grad">klanex</span></h1>
+    <p>
+      The simplest thing an agent can do is call the API itself. It's also where agentic
+      workflows break first — hallucinated payloads, timeouts, naked credentials,
+      accidental double-executions. Here's what changes when klanex sits in between.
+    </p>
+  </div>
+</header>
+
+<section class="section" style="padding-top: 40px;">
+  <div class="container">
+    <div class="compare-wrap">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>When this happens…</th>
+            <th>Agent calls the API directly</th>
+            <th class="col-k">Through klanex</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>The model hallucinates a payload field</td><td>A cryptic <code>400</code> comes back for the model to decode, far from where it went wrong</td><td class="col-k">Schema-gated in milliseconds; an <code>llm_hint</code> is written for the model to self-correct</td></tr>
+          <tr><td>The target returns 429 / 5xx / times out</td><td>The agent stalls, crashes, or you hand-roll retry logic</td><td class="col-k">Absorbed with backoff and per-host circuit breakers — the agent never blocks</td></tr>
+          <tr><td>The agent thinks for 30–60&nbsp;s mid-call</td><td>The held-open HTTP connection times out</td><td class="col-k">Asynchronous: an <code>execution_id</code> in ~15&nbsp;ms, result via signed webhook or poll</td></tr>
+          <tr><td>Credentials</td><td>Raw API keys live in the model's environment</td><td class="col-k">KMS-sealed vault; decrypted only in a worker, redacted everywhere else</td></tr>
+          <tr><td>A retry fires twice</td><td>Possible double-charge or double-send</td><td class="col-k">Exactly-once with an <code>idempotency_key</code></td></tr>
+          <tr><td>A destructive call needs a human</td><td>No gate — the agent just does it</td><td class="col-k"><code>requires_approval</code> pauses for approve/reject (Slack, dashboard, API)</td></tr>
+          <tr><td>Something fails at 2&nbsp;a.m.</td><td>Re-prompt the LLM to reconstruct the call</td><td class="col-k">Replay byte-exact — no LLM round-trip</td></tr>
+          <tr><td>Compliance asks "what did the agent do?"</td><td>Build your own logging</td><td class="col-k">Full audit trail of every intent, attempt, and decision — queryable</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="section section-alt">
+  <div class="container prose">
+    <h3>Wiring an LLM straight into production APIs breaks in three predictable ways</h3>
+    <p>
+      <strong>Hallucinated payloads.</strong> One invented JSON key and a five-step workflow
+      dies at step three — with the API's cryptic 400 stranded far from the model that
+      caused it. klanex validates every intent against your JSON Schema first and bounces
+      failures back instantly with an <code>llm_hint</code> the agent uses to fix itself.
+    </p>
+    <p>
+      <strong>Brittle synchronous loops.</strong> An agent thinks for 30–60 seconds while a
+      held-open HTTP connection ticks toward a timeout, and every timeout takes the agent's
+      operational context with it. klanex closes that loop in milliseconds and executes on
+      its own terms — queued, retried, and reported via a signed webhook.
+    </p>
+    <p>
+      <strong>Naked credentials.</strong> Nobody wants raw production keys floating through a
+      generative environment, or an agent autonomously refunding customers unsupervised.
+      klanex seals credentials in a KMS vault the moment they arrive and gates destructive
+      calls behind human approval.
+    </p>
+    <h3>The point isn't "never call an API"</h3>
+    <p>
+      For a read-only, low-stakes call to a reliable endpoint, calling directly is fine.
+      klanex earns its place on the calls that have <strong>side effects</strong> (payments,
+      messages, tickets, writes) or hit <strong>flaky targets</strong> — exactly the calls
+      where a hallucination or a rate limit turns into a real incident.
+    </p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2 class="section-title">Same call, one layer of safety</h2>
+    <p class="section-sub">Point the intent at klanex instead of the target. You get an execution ID in milliseconds; klanex owns everything after.</p>
+    <div class="terminal" style="max-width: 820px; margin: 44px auto 0;" role="img" aria-label="Submitting a tool call to klanex">
+      <div class="terminal-bar">
+        <span class="tdot tdot-r"></span><span class="tdot tdot-y"></span><span class="tdot tdot-g"></span>
+        <span class="terminal-title">agent → klanex → stripe</span>
+      </div>
+      <pre class="terminal-body"><code><span class="t-dim">$</span> <span class="t-cmd">curl -s https://api.klanexai.com/v1/executions -H "X-API-Key: klx_…" -d '{</span>
+<span class="t-cmd">    "target":  { "url": "https://api.stripe.com/v1/refunds", "headers": { … } },</span>
+<span class="t-cmd">    "payload": { "charge_id": "ch_9f2k", "amount": 500 },</span>
+<span class="t-cmd">    "payload_schema": { "type": "object", "required": ["charge_id", "amount"] },</span>
+<span class="t-cmd">    "idempotency_key": "refund-ch_9f2k" }'</span>
+
+<span class="t-ok">{"execution_id": "exe_4d0c85a6", "status": "QUEUED"}</span>   <span class="t-dim"># 14 ms — agent is free</span></code></pre>
+    </div>
+  </div>
+</section>
+
+<section class="section section-cta">
+  <div class="container cta-box">
+    <h2>Stop babysitting your agents' API calls.</h2>
+    <p>Start free — 1,000 executions a month, the full reliability engine, no credit card to explore.</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="https://api.klanexai.com/signup/">Get your API key</a>
+      <a class="btn btn-ghost" href="/docs/">Read the docs →</a>
+    </div>
+    <div class="compare-links">
+      <a class="inline-link" href="/compare/langchain-retries/">Compare: framework retries vs. klanex →</a>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container footer-inner">
+    <span class="wordmark wordmark-sm">
+      <img src="../../logo.png" alt="klanex logo" class="wordmark-logo" />
+      klanex<span class="wordmark-dot">_</span>
+    </span>
+    <div class="footer-links">
+      <a href="/docs/">Docs</a>
+      <a href="/compare/">Compare</a>
+      <a href="https://github.com/chrassy/klanex-mcp" target="_blank" rel="noopener">MCP server</a>
+    </div>
+    <span class="footer-copy">© 2026 klanex</span>
+  </div>
+</footer>
+
+</body>
+</html>

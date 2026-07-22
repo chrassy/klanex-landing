@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Compare klanex — reliability for agent tool calls</title>
+  <meta name="description" content="How klanex compares to the alternatives for running AI agent tool calls reliably: framework retries (LangChain/LlamaIndex) and calling production APIs directly." />
+  <meta property="og:title" content="Compare klanex" />
+  <meta property="og:description" content="klanex vs. the ways teams run agent tool calls today." />
+  <meta property="og:type" content="website" />
+  <link rel="canonical" href="https://klanexai.com/compare/" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../styles.css" />
+  <link rel="icon" href="../logo.png" />
+  <!-- Cloudflare Web Analytics — cookieless, no consent banner needed. -->
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "b17b87f9cb544782b28a4e8b9606c09d"}'></script>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container nav-inner">
+    <a class="wordmark" href="/">
+      <img src="../logo.png" alt="klanex logo" class="wordmark-logo" />
+      klanex<span class="wordmark-dot">_</span>
+    </a>
+    <div class="nav-links">
+      <a href="/#how">How it works</a>
+      <a href="/#features">Features</a>
+      <a href="/#integrations">Integrations</a>
+      <a href="/docs/">Docs</a>
+      <a href="/#pricing">Pricing</a>
+    </div>
+    <a class="btn btn-primary btn-sm" href="https://api.klanexai.com/signup/">Get API key</a>
+  </div>
+</nav>
+
+<header class="page-head">
+  <div class="container">
+    <p class="hero-eyebrow"><span class="pill">Compare</span></p>
+    <h1>klanex vs. how you<br />run tool calls <span class="grad">today</span></h1>
+    <p>
+      klanex is the asynchronous execution layer between LLM agents and production APIs.
+      Here's how it lines up against the two most common ways teams handle agent tool calls
+      right now.
+    </p>
+  </div>
+</header>
+
+<section class="section" style="padding-top: 48px;">
+  <div class="container">
+    <div class="grid grid-3">
+      <a class="card" href="/compare/langchain-retries/" style="text-decoration: none;">
+        <h3>vs. framework retries →</h3>
+        <p>LangChain's <code>.with_retry()</code> and LlamaIndex's retry helpers run in-process and synchronously. See why durable, async execution survives the agent process — and why teams run both.</p>
+      </a>
+      <a class="card" href="/compare/direct-api-calls/" style="text-decoration: none;">
+        <h3>vs. calling APIs directly →</h3>
+        <p>The naive baseline breaks on hallucinated payloads, timeouts, naked credentials, and double-executions. See what changes with a reliability layer in between.</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="section section-cta">
+  <div class="container cta-box">
+    <h2>Your agents reason. klanex executes.</h2>
+    <p>Start free — 1,000 executions a month, the full reliability engine, no credit card to explore.</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="https://api.klanexai.com/signup/">Get your API key</a>
+      <a class="btn btn-ghost" href="/">Back to home →</a>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container footer-inner">
+    <span class="wordmark wordmark-sm">
+      <img src="../logo.png" alt="klanex logo" class="wordmark-logo" />
+      klanex<span class="wordmark-dot">_</span>
+    </span>
+    <div class="footer-links">
+      <a href="/docs/">Docs</a>
+      <a href="https://github.com/chrassy/klanex-mcp" target="_blank" rel="noopener">MCP server</a>
+    </div>
+    <span class="footer-copy">© 2026 klanex</span>
+  </div>
+</footer>
+
+</body>
+</html>

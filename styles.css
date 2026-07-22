@@ -267,3 +267,28 @@ h1 {
   .terminal-body { font-size: 11.5px; }
   .footer-inner { flex-direction: column; gap: 12px; }
 }
+
+/* ── comparison pages ────────────────────────────────────────────────── */
+.page-head { text-align: center; padding: 92px 0 4px; }
+.page-head .pill { margin-bottom: 20px; }
+.page-head h1 { font-size: clamp(30px, 4.6vw, 46px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.08; }
+.page-head p { color: var(--muted); max-width: 690px; margin: 20px auto 0; font-size: 17px; line-height: 1.6; }
+.prose { max-width: 720px; margin: 0 auto; }
+.prose > p { color: var(--muted); font-size: 15.5px; margin-bottom: 16px; }
+.prose h3 { color: var(--text); font-size: 19px; margin: 30px 0 10px; letter-spacing: -0.01em; }
+.prose strong { color: var(--text); }
+.prose ul { margin: 0 0 16px; padding: 0; list-style: none; }
+.prose li { color: var(--muted); font-size: 15.5px; margin-bottom: 10px; padding-left: 24px; position: relative; }
+.prose li::before { content: "\2192"; position: absolute; left: 0; color: var(--accent-1); }
+.compare-wrap { overflow-x: auto; margin: 52px auto 0; max-width: 920px; }
+.compare-table { width: 100%; min-width: 620px; border-collapse: collapse; font-size: 14.5px; }
+.compare-table th, .compare-table td { padding: 14px 18px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--muted); }
+.compare-table thead th { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; }
+.compare-table tbody td:first-child, .compare-table thead th:first-child { color: var(--text); font-weight: 500; width: 34%; }
+.compare-table td.col-k { background: rgba(124, 92, 255, 0.06); border-inline: 1px solid rgba(124, 92, 255, 0.22); color: var(--text); }
+.compare-table thead th.col-k { background: rgba(124, 92, 255, 0.06); border-inline: 1px solid rgba(124, 92, 255, 0.22); border-bottom: none; color: var(--text); }
+.compare-table tbody tr:last-child td.col-k { border-bottom: 1px solid rgba(124, 92, 255, 0.22); }
+.yes { color: #4ade80; font-weight: 600; }
+.no { color: #f87171; }
+.mid { color: #fbbf24; }
+.compare-links { max-width: 720px; margin: 40px auto 0; display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; font-size: 14.5px; }

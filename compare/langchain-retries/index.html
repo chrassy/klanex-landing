@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>klanex vs. LangChain &amp; LlamaIndex retries — durable tool execution for agents</title>
+  <meta name="description" content="LangChain and LlamaIndex retry tool calls in-process and synchronously. klanex makes execution async and durable — surviving process crashes — and adds schema-gating, idempotency, a credential vault, human approvals, and replay." />
+  <meta property="og:title" content="Framework retries vs. klanex" />
+  <meta property="og:description" content="Why most teams run their LangChain/LlamaIndex agent and klanex together: in-process retries vs. durable, async execution." />
+  <meta property="og:type" content="article" />
+  <link rel="canonical" href="https://klanexai.com/compare/langchain-retries/" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../styles.css" />
+  <link rel="icon" href="../../logo.png" />
+  <!-- Cloudflare Web Analytics — cookieless, no consent banner needed. -->
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "b17b87f9cb544782b28a4e8b9606c09d"}'></script>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container nav-inner">
+    <a class="wordmark" href="/">
+      <img src="../../logo.png" alt="klanex logo" class="wordmark-logo" />
+      klanex<span class="wordmark-dot">_</span>
+    </a>
+    <div class="nav-links">
+      <a href="/#how">How it works</a>
+      <a href="/#features">Features</a>
+      <a href="/compare/">Compare</a>
+      <a href="/docs/">Docs</a>
+      <a href="/#pricing">Pricing</a>
+    </div>
+    <a class="btn btn-primary btn-sm" href="https://api.klanexai.com/signup/">Get API key</a>
+  </div>
+</nav>
+
+<header class="page-head">
+  <div class="container">
+    <p class="hero-eyebrow"><span class="pill">Comparison</span></p>
+    <h1>Framework retries vs. <span class="grad">klanex</span></h1>
+    <p>
+      LangChain's <code>.with_retry()</code> and LlamaIndex's retry helpers keep an agent's
+      tool calls alive <em>inside the process</em>. klanex moves execution off the process
+      entirely — durable, asynchronous, and self-correcting. Here's how they compare, and
+      why most teams run both.
+    </p>
+  </div>
+</header>
+
+<section class="section" style="padding-top: 40px;">
+  <div class="container">
+    <div class="compare-wrap">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>Capability</th>
+            <th>In-process retries<br />(LangChain / LlamaIndex)</th>
+            <th class="col-k">klanex</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Retry with exponential backoff</td><td><span class="yes">Yes</span> — synchronous, in-memory</td><td class="col-k"><span class="yes">Yes</span> — asynchronous, queue-driven</td></tr>
+          <tr><td>Survives the agent process crashing or restarting</td><td><span class="no">No</span> — retry state lives in memory</td><td class="col-k"><span class="yes">Yes</span> — state persisted; the queue redelivers</td></tr>
+          <tr><td>Blocks the agent loop while retrying</td><td><span class="no">Yes</span> — the call is held open</td><td class="col-k"><span class="yes">No</span> — returns an <code>execution_id</code> in ~15&nbsp;ms</td></tr>
+          <tr><td>Per-host circuit breakers</td><td><span class="no">No</span></td><td class="col-k"><span class="yes">Yes</span></td></tr>
+          <tr><td>Catches hallucinated payloads <em>before</em> the call</td><td><span class="no">No</span></td><td class="col-k"><span class="yes">Yes</span> — JSON Schema gate returns an <code>llm_hint</code></td></tr>
+          <tr><td>Idempotency (a retry can't double-execute)</td><td><span class="mid">Do it yourself</span></td><td class="col-k"><span class="yes">Built in</span> — <code>idempotency_key</code></td></tr>
+          <tr><td>Credentials kept out of the model's environment</td><td><span class="no">No</span></td><td class="col-k"><span class="yes">Yes</span> — KMS-sealed vault</td></tr>
+          <tr><td>Human approval before destructive calls</td><td><span class="no">No</span></td><td class="col-k"><span class="yes">Yes</span> — <code>requires_approval</code></td></tr>
+          <tr><td>Audit trail + one-call replay after an outage</td><td><span class="no">No</span></td><td class="col-k"><span class="yes">Yes</span></td></tr>
+          <tr><td>Works with no framework / other languages</td><td><span class="mid">Framework-bound</span></td><td class="col-k"><span class="yes">Yes</span> — REST API + MCP</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="section section-alt">
+  <div class="container prose">
+    <h3>They solve different halves of the problem</h3>
+    <p>
+      In-process retries are genuinely useful for the near-happy path inside a single
+      request: a transient blip, retried a few times, with the backoff state held in
+      memory. But that state inherits the agent process's lifetime. If the pod is
+      recycled, the request is cancelled, or the synchronous call times out while the
+      model is still thinking, the retry state — and the in-flight tool call — is gone.
+    </p>
+    <p>
+      klanex treats the tool call as a <strong>durable job</strong> instead. You submit the
+      intent, get an <code>execution_id</code> in milliseconds, and klanex owns the retries
+      on the queue's redelivery, the exponential backoff, and the per-host circuit
+      breakers — independent of whether your agent is still running.
+    </p>
+    <h3>And it does things a retry decorator structurally can't</h3>
+    <ul>
+      <li>Gate a hallucinated payload against a JSON Schema and hand the model an <code>llm_hint</code> to fix itself — before the call ever leaves.</li>
+      <li>Seal third-party credentials in a KMS vault; the model's environment never holds a raw key.</li>
+      <li>Pause a destructive call for human approval, from a Slack button or the API.</li>
+      <li>Replay a failed call byte-exact after an outage — no second trip through the LLM to reconstruct it.</li>
+    </ul>
+    <h3>So run both</h3>
+    <p>
+      Keep LangChain or LlamaIndex for orchestration and reasoning. Route the tool calls
+      that touch money, external systems, or flaky APIs through klanex — it's a single
+      HTTP call (or an MCP tool), so it drops into a framework tool without rewriting your
+      agent.
+    </p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2 class="section-title">One call from inside any framework tool</h2>
+    <p class="section-sub">Submit the intent to klanex instead of calling the API directly. The 422 schema-gate self-correction loop comes free.</p>
+    <div class="terminal" style="max-width: 820px; margin: 44px auto 0;" role="img" aria-label="Submitting a tool call to klanex">
+      <div class="terminal-bar">
+        <span class="tdot tdot-r"></span><span class="tdot tdot-y"></span><span class="tdot tdot-g"></span>
+        <span class="terminal-title">framework tool → klanex</span>
+      </div>
+      <pre class="terminal-body"><code><span class="t-dim"># inside your LangChain / LlamaIndex tool, instead of requests.post(...)</span>
+<span class="t-cmd">POST https://api.klanexai.com/v1/executions   X-API-Key: klx_…</span>
+<span class="t-cmd">{ "target": { "url": "https://api.stripe.com/v1/refunds", "headers": {…} },</span>
+<span class="t-cmd">  "payload": agent_json, "payload_schema": {…}, "idempotency_key": "refund-ch_9f2k" }</span>
+
+<span class="t-ok">202 {"execution_id": "exe_4d0c85a6", "status": "QUEUED"}</span>  <span class="t-dim"># agent moves on</span>
+<span class="t-dim"># retries, backoff, breakers, and the signed webhook are klanex's problem now</span></code></pre>
+    </div>
+  </div>
+</section>
+
+<section class="section section-cta">
+  <div class="container cta-box">
+    <h2>Make your agent's tool calls survive the agent.</h2>
+    <p>Start free — 1,000 executions a month, the full reliability engine, no credit card to explore.</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="https://api.klanexai.com/signup/">Get your API key</a>
+      <a class="btn btn-ghost" href="/docs/">Read the docs →</a>
+    </div>
+    <div class="compare-links">
+      <a class="inline-link" href="/compare/direct-api-calls/">Compare: calling APIs directly vs. klanex →</a>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container footer-inner">
+    <span class="wordmark wordmark-sm">
+      <img src="../../logo.png" alt="klanex logo" class="wordmark-logo" />
+      klanex<span class="wordmark-dot">_</span>
+    </span>
+    <div class="footer-links">
+      <a href="/docs/">Docs</a>
+      <a href="/compare/">Compare</a>
+      <a href="https://github.com/chrassy/klanex-mcp" target="_blank" rel="noopener">MCP server</a>
+    </div>
+    <span class="footer-copy">© 2026 klanex</span>
+  </div>
+</footer>
+
+</body>
+</html>

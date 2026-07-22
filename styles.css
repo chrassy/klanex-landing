@@ -135,6 +135,11 @@ h1 {
 .section-sub { text-align: center; color: var(--muted); max-width: 640px; margin: 18px auto 0; font-size: 16.5px; }
 .section-title + .grid, .section-sub + .grid, .section-sub + .flow, .section-sub + .code-tabs { margin-top: 52px; }
 .section-title + .flow { margin-top: 52px; }
+/* Eyebrow reused outside the centered hero, and the card grid / registry
+   links that follow the MCP terminal, which the rules above don't cover. */
+.hero-eyebrow.centered { text-align: center; }
+.terminal + .grid { margin-top: 52px; }
+.mcp-links { margin-top: 32px; margin-bottom: 0; }
 
 /* ── cards ───────────────────────────────────────────────────────────── */
 .grid { display: grid; gap: 18px; }

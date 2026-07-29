@@ -1,0 +1,5 @@
+# klanexai.com
+User-agent: *
+Allow: /
+
+Sitemap: https://klanexai.com/sitemap.xml

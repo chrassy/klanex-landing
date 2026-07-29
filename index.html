@@ -27,6 +27,7 @@
       klanex<span class="wordmark-dot">_</span>
     </a>
     <div class="nav-links">
+      <a href="#try">Try it</a>
       <a href="#how">How it works</a>
       <a href="#features">Features</a>
       <a href="#integrations">Integrations</a>
@@ -52,8 +53,8 @@
       hallucinated JSON key or a rate limit never crashes your workflow.
     </p>
     <div class="hero-actions">
-      <a class="btn btn-primary" href="https://api.klanexai.com/signup/">Start free</a>
-      <a class="btn btn-ghost" href="#code">See the code →</a>
+      <a class="btn btn-primary" href="#try">Try it in your agent — no signup</a>
+      <a class="btn btn-ghost" href="https://api.klanexai.com/signup/">Start free →</a>
     </div>
 
     <div class="terminal" role="img" aria-label="Terminal showing an agent tool call executed through klanex">
@@ -76,6 +77,30 @@
     </div>
   </div>
 </header>
+
+<section class="section section-alt" id="try">
+  <div class="container">
+    <h2 class="section-title">Try it in your agent<br /><span class="grad">in 60 seconds, no signup</span></h2>
+    <p class="section-sub">Grab a free sandbox key with one command — no account, no card — and wire klanex into your agent as MCP tools. Works in Claude Code, Cursor, VS Code, and Windsurf.</p>
+    <div class="terminal" style="max-width: 860px; margin: 44px auto 0;" role="img" aria-label="Getting a sandbox key and adding klanex to your agent">
+      <div class="terminal-bar">
+        <span class="tdot tdot-r"></span><span class="tdot tdot-y"></span><span class="tdot tdot-g"></span>
+        <span class="terminal-title">try klanex — no signup</span>
+      </div>
+      <pre class="terminal-body"><code><span class="t-dim"># 1. grab a free sandbox key (no signup, no card, 100 executions)</span>
+<span class="t-cmd">curl -sX POST https://api.sandbox.klanexai.com/playground/key</span>
+<span class="t-ok">{"api_key": "klx_test_9f2k…", "mcp_url": "https://api.sandbox.klanexai.com/mcp", …}</span>
+
+<span class="t-dim"># 2. add klanex to your agent as tools (Claude Code shown)</span>
+<span class="t-cmd">claude mcp add --transport http klanex https://api.sandbox.klanexai.com/mcp \</span>
+<span class="t-cmd">  --header "X-API-Key: klx_test_9f2k…"</span>
+
+<span class="t-dim"># your agent now has execute · get_execution · list_executions · replay · get_usage</span>
+<span class="t-dim"># stdio-only client? use:</span> <span class="t-cmd">KLANEX_API_KEY=klx_test_… npx -y klanex-mcp</span></code></pre>
+    </div>
+    <p class="section-sub" style="margin-top: 28px;">Sandbox keys are disposable (Stripe test mode, auto-expire after 7 days). Ready for production? <a class="inline-link" href="https://api.klanexai.com/signup/">Create a durable account →</a></p>
+  </div>
+</section>
 
 <section class="section" id="problem">
   <div class="container">

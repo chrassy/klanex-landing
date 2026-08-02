@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The three ways an agent should respond to a failed tool call</title>
+  <meta name="description" content="Agents treat every failed tool call the same way — re-prompt the model, or blindly retry. Both are usually wrong. A small taxonomy — retry, re-prompt, or escalate — fixes it, and agenterr is the open-source library that implements it." />
+  <meta property="og:title" content="The three ways an agent should respond to a failed tool call" />
+  <meta property="og:description" content="Re-prompting on a 503 corrupts a good payload; retrying a 400 loops forever; rewriting args on a 401 never works. Classify the failure into retry / re-prompt / escalate — with agenterr, an open-source, dependency-free taxonomy." />
+  <meta property="og:type" content="article" />
+  <link rel="canonical" href="https://klanexai.com/blog/agent-tool-call-error-taxonomy/" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../styles.css" />
+  <link rel="icon" href="../../logo.png" />
+  <!-- Cloudflare Web Analytics — cookieless, no consent banner needed. -->
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "b17b87f9cb544782b28a4e8b9606c09d"}'></script>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container nav-inner">
+    <a class="wordmark" href="/">
+      <img src="../../logo.png" alt="klanex logo" class="wordmark-logo" />
+      klanex<span class="wordmark-dot">_</span>
+    </a>
+    <div class="nav-links">
+      <a href="/#how">How it works</a>
+      <a href="/#features">Features</a>
+      <a href="/blog/">Blog</a>
+      <a href="/compare/">Compare</a>
+      <a href="/docs/">Docs</a>
+      <a href="/#pricing">Pricing</a>
+    </div>
+    <a class="btn btn-primary btn-sm" href="https://api.klanexai.com/signup/">Get API key</a>
+  </div>
+</nav>
+
+<header class="page-head">
+  <div class="container">
+    <p class="hero-eyebrow"><span class="pill">Open source</span></p>
+    <h1>The three ways an agent should<br />respond to a failed <span class="grad">tool call</span></h1>
+    <p>
+      An LLM agent is good at deciding <em>what</em> to do and bad at handling what
+      happens when the call fails. Most agents react to every failure the same way —
+      re-prompt the model, or blindly retry. Both are wrong most of the time. Here's the
+      smaller idea that fixes it, and the tiny open-source library that implements it.
+    </p>
+    <p style="margin-top: 22px; font-size: 13.5px; color: var(--muted); letter-spacing: 0.02em;">
+      klanex engineering · August 2026 · ~6 min read
+    </p>
+  </div>
+</header>
+
+<section class="section section-alt" style="padding-top: 44px;">
+  <div class="container prose">
+    <p>
+      When a tool call fails, the model gets back a raw <code>403</code>, a swallowed
+      exception, or a two-page HTML error, and reacts on instinct. The instinct is almost
+      always one of two moves — re-prompt itself, or retry — and both are usually the
+      wrong one:
+    </p>
+    <ul>
+      <li>
+        <strong>Re-prompt on a <code>503</code>.</strong> Burns tokens, and worse, invites
+        the model to "fix" a payload that was already correct. The API was down; the
+        arguments were fine.
+      </li>
+      <li>
+        <strong>Retry a <code>400</code> forever.</strong> The request is malformed. The
+        tenth identical attempt fails exactly like the first.
+      </li>
+      <li>
+        <strong>Rewrite the payload on a <code>401</code>.</strong> No edit to the body
+        will ever satisfy an expired token.
+      </li>
+    </ul>
+    <p>
+      The mistake underneath all three is the same: reacting to the HTTP <em>status</em>
+      instead of to what it means for the agent.
+    </p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container prose">
+    <h3>The question isn't the status code</h3>
+    <p>
+      A <code>429</code> and a <code>400</code> are both "the call failed," but they demand
+      opposite responses: wait and try again unchanged, versus stop and fix the request.
+      The useful axis was never the number — it's the reaction the number should trigger.
+      There turn out to be exactly three, plus an honest fourth for "I don't know":
+    </p>
+    <ul>
+      <li>
+        <strong>Transient</strong> — not the request's fault (a rate limit, a timeout, an
+        upstream <code>5xx</code>). Retry with backoff; the model changes nothing.
+      </li>
+      <li>
+        <strong>Self-correctable</strong> — the request is wrong in a way the model can fix
+        (a bad field, a hallucinated id). Feed a hint back and resend.
+      </li>
+      <li>
+        <strong>Auth</strong> — credentials or permissions, not the payload. Stop; a human
+        or the orchestrator fixes it. The model must <em>not</em> touch the arguments.
+      </li>
+      <li>
+        <strong>Indeterminate</strong> — genuinely unclassifiable. Escalate rather than
+        guess.
+      </li>
+    </ul>
+  </div>
+</section>
+
+<section class="section section-alt">
+  <div class="container prose">
+    <h3>A taxonomy small enough to remember</h3>
+    <p>
+      Map every failure to one of those four classes and "what should the agent do" stops
+      being a per-tool judgment call. Eight codes cover the HTTP reality:
+    </p>
+  </div>
+  <div class="container">
+    <div class="terminal" style="max-width: 820px; margin: 8px auto 0;" role="img" aria-label="The eight error codes grouped into four response classes">
+      <div class="terminal-bar">
+        <span class="tdot tdot-r"></span><span class="tdot tdot-y"></span><span class="tdot tdot-g"></span>
+        <span class="terminal-title">failure → class → what the agent should do</span>
+      </div>
+      <pre class="terminal-body"><code><span class="t-dim"># failure class → what the agent should do</span>
+
+<span class="t-ok">transient</span>         → retry with backoff, unchanged
+  <span class="t-dim">RATE_LIMITED · TIMEOUT · UNAVAILABLE</span>
+<span class="t-cmd">self_correctable</span>  → re-prompt with the hint, resend
+  <span class="t-dim">SCHEMA_INVALID · INVALID_REQUEST · NOT_FOUND</span>
+<span class="t-err">auth</span>              → stop; fix credentials, don't touch args
+  <span class="t-dim">UNAUTHORIZED</span>
+<span class="t-err">indeterminate</span>     → escalate to a human
+  <span class="t-dim">UNKNOWN</span></code></pre>
+    </div>
+  </div>
+  <div class="container prose" style="margin-top: 28px;">
+    <p>
+      "Retryable" is just shorthand for the <strong>transient</strong> class — the only one
+      you should ever retry unchanged. Everything else is a bug in the request, a problem
+      with your credentials, or something a human needs to look at.
+    </p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container prose">
+    <h3>The hint is the point</h3>
+    <p>
+      Classifying the failure is half of it. The other half is telling the model what to do
+      in words you can paste straight into its context — and the most valuable hint is often
+      the one that tells it to do <em>nothing</em>:
+    </p>
+  </div>
+  <div class="container">
+    <div class="terminal" style="max-width: 820px; margin: 8px auto 0;" role="img" aria-label="The hint attached to a 401 failure, telling the model not to modify its arguments">
+      <div class="terminal-bar">
+        <span class="tdot tdot-r"></span><span class="tdot tdot-y"></span><span class="tdot tdot-g"></span>
+        <span class="terminal-title">the hint for a 401</span>
+      </div>
+      <pre class="terminal-body"><code><span class="t-dim"># the model's instinct: "let me fix my arguments and try again"</span>
+<span class="t-ok">"The API rejected this call as unauthorized (HTTP 401). This is a</span>
+<span class="t-ok"> credentials or permissions problem, NOT a problem with your</span>
+<span class="t-ok"> arguments — do not modify them. A human or the orchestrator must</span>
+<span class="t-ok"> fix authentication before retrying."</span></code></pre>
+    </div>
+  </div>
+  <div class="container prose" style="margin-top: 28px;">
+    <p>
+      A transient or auth hint that fails to say "don't change the request" is exactly how a
+      good payload gets mangled on the retry. Telling the model what <em>not</em> to touch is
+      as important as telling it what to fix.
+    </p>
+  </div>
+</section>
+
+<section class="section section-alt">
+  <div class="container prose">
+    <h3>Eight lines in your agent loop</h3>
+    <p>
+      This is small enough that you could write it yourself — and everyone does, slightly
+      differently, in every tool. So we pulled it out into
+      <a class="inline-link" href="https://github.com/chrassy/agenterr" target="_blank" rel="noopener">agenterr</a>:
+      a dependency-free library that classifies a tool-call result and hands back the code,
+      the class, whether to retry, and the hint.
+    </p>
+  </div>
+  <div class="container">
+    <div class="terminal" style="max-width: 820px; margin: 8px auto 0;" role="img" aria-label="Using agenterr to classify a tool-call result and branch on the response class">
+      <div class="terminal-bar">
+        <span class="tdot tdot-r"></span><span class="tdot tdot-y"></span><span class="tdot tdot-g"></span>
+        <span class="terminal-title">classify, then branch by class</span>
+      </div>
+      <pre class="terminal-body"><code>out := agenterr.Classify(resp.StatusCode, body, err)
+switch {
+<span class="t-cmd">case</span> out.OK:                                     <span class="t-dim">// 2xx — nothing to do</span>
+<span class="t-cmd">case</span> out.Retryable:                              <span class="t-dim">// transient — retry, don't touch args</span>
+<span class="t-cmd">case</span> out.Class == agenterr.ClassSelfCorrectable: <span class="t-dim">// re-prompt with out.LLMHint</span>
+<span class="t-cmd">default</span>:                                         <span class="t-dim">// auth / unknown — escalate</span>
+}</code></pre>
+    </div>
+  </div>
+  <div class="container prose" style="margin-top: 28px;">
+    <p>
+      It's Apache-2.0, has no dependencies, and ships with a language-agnostic spec so ports
+      (Python and TypeScript next) classify identically. It also handles the parts people
+      skip: transport-error timeouts, <code>Retry-After</code> parsing, bounded body
+      snippets in the hint, and a pre-flight <code>SchemaInvalid</code> path so you can catch
+      a bad payload <em>before</em> you even make the call.
+    </p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container prose">
+    <h3>What it deliberately doesn't do</h3>
+    <p>
+      agenterr classifies and advises. It never makes the call, retries, backs off, breaks
+      circuits, or persists anything — and it never will. It's a decision function, not an
+      execution engine.
+    </p>
+    <p>
+      That line matters, because the moment you <em>act</em> on <code>Retryable: true</code>
+      in a way that has to survive a process restart, not block your agent for ten minutes,
+      and leave an audit trail, you've stopped classifying and started building durable
+      execution. That's a different — and much larger — problem. (We wrote up why agents
+      fail at exactly that,
+      <a class="inline-link" href="/blog/why-ai-agents-fail-at-tool-calls/">five ways over</a>.)
+    </p>
+    <p>
+      You can build that engine yourself on top of agenterr. Or you can hand the whole thing
+      to <strong>klanex</strong>, which runs this taxonomy as a service: submit the tool call
+      as an intent and it does the durable retries, per-host circuit breaking, credential
+      sealing, and signed webhooks — returning these exact codes and hints. agenterr is the
+      open taxonomy; klanex is the managed engine that
+      <a class="inline-link" href="/#features">acts on it</a>.
+    </p>
+  </div>
+</section>
+
+<section class="section section-cta">
+  <div class="container cta-box">
+    <h2>Start with the taxonomy. Add the engine when you need it.</h2>
+    <p>agenterr is open source and free — drop it into your agent loop, or read the spec. When you need the durable execution behind it, klanex is the managed version.</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="https://github.com/chrassy/agenterr" target="_blank" rel="noopener">★ agenterr on GitHub</a>
+      <a class="btn btn-ghost" href="https://api.klanexai.com/signup/">See how klanex runs it →</a>
+    </div>
+    <div class="compare-links">
+      <a class="inline-link" href="/blog/">← More from the blog</a>
+      <a class="inline-link" href="/blog/why-ai-agents-fail-at-tool-calls/">Why agents fail at tool calls →</a>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container footer-inner">
+    <span class="wordmark wordmark-sm">
+      <img src="../../logo.png" alt="klanex logo" class="wordmark-logo" />
+      klanex<span class="wordmark-dot">_</span>
+    </span>
+    <div class="footer-links">
+      <a href="/blog/">Blog</a>
+      <a href="/docs/">Docs</a>
+      <a href="/compare/">Compare</a>
+      <a href="https://github.com/chrassy/klanex-mcp" target="_blank" rel="noopener">MCP server</a>
+    </div>
+    <span class="footer-copy">© 2026 klanex</span>
+  </div>
+</footer>
+
+</body>
+</html>

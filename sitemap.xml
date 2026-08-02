@@ -19,6 +19,12 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://klanexai.com/blog/why-ai-agents-fail-at-tool-calls/</loc>
+    <lastmod>2026-08-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://klanexai.com/blog/how-klanex-handles-agent-credentials/</loc>
     <lastmod>2026-08-02</lastmod>
     <changefreq>monthly</changefreq>

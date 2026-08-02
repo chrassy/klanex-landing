@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Why AI agents fail at tool calls in production</title>
+  <meta name="description" content="The demo works, then the agent meets a real API. Hallucinated payloads, 429s and outages, timeouts while the model reasons, retries that double-execute, silent 2 a.m. failures — the five failure modes that turn an agent demo into a production incident, and what actually fixes each one." />
+  <meta property="og:title" content="Why AI agents fail at tool calls in production" />
+  <meta property="og:description" content="The five failure modes that turn an agent demo into a production incident — hallucinated payloads, rate limits, timeouts, double-executions, silent failures — and the pattern that fixes each." />
+  <meta property="og:type" content="article" />
+  <link rel="canonical" href="https://klanexai.com/blog/why-ai-agents-fail-at-tool-calls/" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../styles.css" />
+  <link rel="icon" href="../../logo.png" />
+  <!-- Cloudflare Web Analytics — cookieless, no consent banner needed. -->
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "b17b87f9cb544782b28a4e8b9606c09d"}'></script>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container nav-inner">
+    <a class="wordmark" href="/">
+      <img src="../../logo.png" alt="klanex logo" class="wordmark-logo" />
+      klanex<span class="wordmark-dot">_</span>
+    </a>
+    <div class="nav-links">
+      <a href="/#how">How it works</a>
+      <a href="/#features">Features</a>
+      <a href="/blog/">Blog</a>
+      <a href="/compare/">Compare</a>
+      <a href="/docs/">Docs</a>
+      <a href="/#pricing">Pricing</a>
+    </div>
+    <a class="btn btn-primary btn-sm" href="https://api.klanexai.com/signup/">Get API key</a>
+  </div>
+</nav>
+
+<header class="page-head">
+  <div class="container">
+    <p class="hero-eyebrow"><span class="pill">Engineering</span></p>
+    <h1>Why AI agents fail at<br />tool calls in <span class="grad">production</span></h1>
+    <p>
+      The demo works on the first try. Then the agent meets a real API — one that
+      rate-limits, times out, and returns cryptic errors — and every sad path the demo
+      never hit becomes a Tuesday. Here are the five failure modes that turn an agent
+      into an incident, and what actually fixes each.
+    </p>
+    <p style="margin-top: 22px; font-size: 13.5px; color: var(--muted); letter-spacing: 0.02em;">
+      klanex engineering · August 2026 · ~7 min read
+    </p>
+  </div>
+</header>
+
+<section class="section section-alt" style="padding-top: 44px;">
+  <div class="container prose">
+    <p>
+      An agent demo calls one reliable API, once, on the happy path, while you watch.
+      Production is the opposite of all four of those. The agent calls flaky third-party
+      APIs, thousands of times, on paths no one watched, while you sleep. The reasoning
+      that looked magical in the demo is still fine — the model is good at deciding
+      <em>what</em> to do. What breaks is the part in between the decision and the API:
+      the <strong>execution</strong>.
+    </p>
+    <p>
+      Almost every "our agent is flaky in prod" story is one of the same five failures.
+      None of them are exotic. They're the <em>default</em> behavior of an LLM wired
+      straight into a real API.
+    </p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container prose">
+    <h3>1. The model hallucinates the payload</h3>
+    <p>
+      LLMs invent fields that don't exist, drop required ones, and fat-finger enum
+      values — confidently. Wired directly to the API, that produces a <code>400</code>
+      three steps into a five-step workflow, with the target's cryptic error message
+      stranded far from the model that caused it. The agent gets back "invalid request"
+      and has to reverse-engineer which of its own tokens was wrong.
+    </p>
+    <p>
+      <strong>The fix is to validate the intent <em>before</em> it leaves</strong> — against
+      a JSON Schema you control — and to return the failure in a form the model can act
+      on, not a form a human has to decode. A raw <code>400</code> is a dead end; a
+      structured hint pointing at the exact missing field is a self-correction loop.
+    </p>
+  </div>
+  <div class="container">
+    <div class="terminal" style="max-width: 780px; margin: 8px auto 0;" role="img" aria-label="A raw 400 versus a schema-gated 422 with an llm_hint">
+      <div class="terminal-bar">
+        <span class="tdot tdot-r"></span><span class="tdot tdot-y"></span><span class="tdot tdot-g"></span>
+        <span class="terminal-title">400 for a human  vs.  422 for the model</span>
+      </div>
+      <pre class="terminal-body"><code><span class="t-dim"># calling the API directly — the model has to decode this:</span>
+<span class="t-err">400 {"error": {"type": "invalid_request_error", "param": null,</span>
+<span class="t-err">            "message": "You cannot pass both amount and amount_off."}}</span>
+
+<span class="t-dim"># through a schema gate — written to be pasted back into the model:</span>
+<span class="t-ok">422 {"error": {"code": "SCHEMA_INVALID",</span>
+<span class="t-ok">  "llm_hint": "The payload is missing required property 'charge_id'.</span>
+<span class="t-ok">              Add it and resubmit; do not change amount."}}</span></code></pre>
+    </div>
+  </div>
+</section>
+
+<section class="section section-alt">
+  <div class="container prose">
+    <h3>2. The target rate-limits, or just falls over</h3>
+    <p>
+      <code>429</code>, <code>503</code>, and connection timeouts are the normal weather
+      of third-party APIs, not edge cases. A naive agent hits one and either stalls,
+      crashes the run, or — worse — retries immediately and hammers an already-struggling
+      endpoint until it opens the circuit for everyone. So teams hand-roll retry logic
+      into every single tool, slightly differently each time, and none of it survives the
+      process being recycled.
+    </p>
+    <p>
+      <strong>Retries belong in infrastructure, not in the agent loop.</strong> Exponential
+      backoff spreads the load instead of amplifying it; a per-host circuit breaker stops
+      throwing requests at a target that's already down; and a dead-letter path keeps a
+      permanently broken call from silently wedging forever. The agent shouldn't know or
+      care that attempt three succeeded after two backoffs.
+    </p>
+
+    <h3>3. The call blocks while the model is still thinking</h3>
+    <p>
+      Agents reason for 30 to 60 seconds mid-task. If the tool call is a synchronous,
+      held-open HTTP request, that connection is ticking toward a timeout the whole time —
+      and when it fires, it takes the agent's operational context with it. The deeper
+      version of this problem: any retry state that lives <em>in the agent process</em>
+      dies when the pod is recycled or the request is cancelled. The in-flight call simply
+      vanishes, and nothing knows it was supposed to happen.
+    </p>
+    <p>
+      <strong>The fix is to make execution asynchronous and durable.</strong> Submit the
+      intent, get an ID back in milliseconds, and let the actual call outlive the agent
+      that requested it — its state persisted, its retries owned by a queue. The agent
+      moves on; the result arrives later by webhook or a poll.
+    </p>
+
+    <h3>4. A retry double-executes a side effect</h3>
+    <p>
+      This is the one that costs real money. A network blip drops the response to a call
+      that <em>actually succeeded</em>; the agent (or your retry wrapper) tries again; and
+      now you've issued two refunds, sent two emails, or created two tickets. Retries and
+      side effects are fundamentally in tension, and "just don't retry" isn't an option
+      when the whole point was resilience.
+    </p>
+    <p>
+      <strong>The fix is an idempotency key.</strong> Tag the intent with a key derived
+      from the thing you're acting on, and a second attempt with the same key returns the
+      original result instead of executing again. Exactly-once, without the agent having
+      to reason about whether its last call went through.
+    </p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container prose">
+    <h3>5. It fails silently at 2 a.m. — and you can't reconstruct it</h3>
+    <p>
+      The most expensive failures are the quiet ones. Something breaks overnight, there's
+      no audit trail of what the agent tried, and the only way to recover is to re-prompt
+      the LLM to rebuild the call from scratch — expensive, non-deterministic, and often
+      impossible because the original context is long gone. And the whole time, the raw
+      production credentials the agent used were sitting in the model's environment, one
+      prompt-injection away from leaking.
+    </p>
+    <p>
+      <strong>The fix is three things you should never build per-agent:</strong> a queryable
+      audit trail of every intent and attempt; byte-exact replay so recovery is one call,
+      not a fresh trip through the model; and credentials sealed out of the model's reach
+      entirely. (We wrote up the credential half of this separately —
+      <a class="inline-link" href="/blog/how-klanex-handles-agent-credentials/">how klanex handles agent credentials</a>.)
+    </p>
+
+    <h3>The pattern under all five</h3>
+    <p>
+      Notice what none of these are: none are failures of <em>reasoning</em>. The model
+      picked the right tool and the right arguments. Everything that broke happened in the
+      gap between the decision and the effect — validation, retries, durability,
+      idempotency, audit. That gap is a distinct layer of the stack, and it's the same
+      layer every team rebuilds, badly, one tool at a time.
+    </p>
+    <p>
+      That layer is exactly what klanex is. You submit the tool call as an intent; klanex
+      schema-gates it, executes it asynchronously with backoff and per-host circuit
+      breakers, enforces idempotency, seals the credentials, keeps the audit trail, and
+      reports back with a signed webhook — the full list of things your agent
+      <a class="inline-link" href="/#features">can't reliably provide for itself</a>. Your
+      agent's job is to reason. Something else's job is to make the call survive.
+    </p>
+  </div>
+</section>
+
+<section class="section section-cta">
+  <div class="container cta-box">
+    <h2>Let your agent reason. Let klanex execute.</h2>
+    <p>Start free — 1,000 executions a month, the full reliability engine, no credit card to explore.</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="https://api.klanexai.com/signup/">Get your API key</a>
+      <a class="btn btn-ghost" href="/docs/">Read the docs →</a>
+    </div>
+    <div class="compare-links">
+      <a class="inline-link" href="/blog/">← More from the blog</a>
+      <a class="inline-link" href="/compare/direct-api-calls/">Direct API calls vs. klanex →</a>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container footer-inner">
+    <span class="wordmark wordmark-sm">
+      <img src="../../logo.png" alt="klanex logo" class="wordmark-logo" />
+      klanex<span class="wordmark-dot">_</span>
+    </span>
+    <div class="footer-links">
+      <a href="/blog/">Blog</a>
+      <a href="/docs/">Docs</a>
+      <a href="/compare/">Compare</a>
+      <a href="https://github.com/chrassy/klanex-mcp" target="_blank" rel="noopener">MCP server</a>
+    </div>
+    <span class="footer-copy">© 2026 klanex</span>
+  </div>
+</footer>
+
+</body>
+</html>

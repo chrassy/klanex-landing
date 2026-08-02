@@ -14,7 +14,19 @@
   </url>
   <url>
     <loc>https://klanexai.com/compare/</loc>
-    <lastmod>2026-07-22</lastmod>
+    <lastmod>2026-08-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://klanexai.com/compare/composio/</loc>
+    <lastmod>2026-08-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://klanexai.com/compare/arcade/</loc>
+    <lastmod>2026-08-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>

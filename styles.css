@@ -124,6 +124,7 @@ h1 {
 .t-dim { color: #5d5a78; }
 .t-cmd { color: #c9c6e0; }
 .t-ok { color: #4ade80; }
+.t-err { color: #f87171; }
 
 /* ── sections ────────────────────────────────────────────────────────── */
 .section { padding: 96px 0; }

@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>klanex blog — reliability, security, and error design for agent tool calls</title>
+  <meta name="description" content="Essays on making AI agent tool calls survive production: credential security, schema-gating hallucinated payloads, handling 429s and outages, and designing error messages an LLM can self-correct from." />
+  <meta property="og:title" content="klanex blog" />
+  <meta property="og:description" content="How to make AI agent tool calls reliable and safe in production — from the team building the execution layer." />
+  <meta property="og:type" content="website" />
+  <link rel="canonical" href="https://klanexai.com/blog/" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../styles.css" />
+  <link rel="icon" href="../logo.png" />
+  <!-- Cloudflare Web Analytics — cookieless, no consent banner needed. -->
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "b17b87f9cb544782b28a4e8b9606c09d"}'></script>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container nav-inner">
+    <a class="wordmark" href="/">
+      <img src="../logo.png" alt="klanex logo" class="wordmark-logo" />
+      klanex<span class="wordmark-dot">_</span>
+    </a>
+    <div class="nav-links">
+      <a href="/#how">How it works</a>
+      <a href="/#features">Features</a>
+      <a href="/blog/">Blog</a>
+      <a href="/compare/">Compare</a>
+      <a href="/docs/">Docs</a>
+      <a href="/#pricing">Pricing</a>
+    </div>
+    <a class="btn btn-primary btn-sm" href="https://api.klanexai.com/signup/">Get API key</a>
+  </div>
+</nav>
+
+<header class="page-head">
+  <div class="container">
+    <p class="hero-eyebrow"><span class="pill">Blog</span></p>
+    <h1>Making agent tool calls<br />survive <span class="grad">production</span></h1>
+    <p>
+      Field notes from building the execution layer between LLM agents and production
+      APIs — credential security, schema-gating hallucinated payloads, absorbing rate
+      limits and outages, and designing errors an LLM can self-correct from.
+    </p>
+  </div>
+</header>
+
+<section class="section" style="padding-top: 48px;">
+  <div class="container">
+    <div class="grid grid-3">
+      <a class="card" href="/blog/how-klanex-handles-agent-credentials/" style="text-decoration: none;">
+        <p style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: var(--accent-2); margin-bottom: 12px;">Security · 6 min</p>
+        <h3>How klanex handles agent credentials →</h3>
+        <p>KMS-sealed at ingest, decrypted only in worker memory for one call, never stored in plaintext, redacted in every read and log. The design, and why it fails closed.</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="section section-cta">
+  <div class="container cta-box">
+    <h2>Your agents reason. klanex executes.</h2>
+    <p>Start free — 1,000 executions a month, the full reliability engine, no credit card to explore.</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="https://api.klanexai.com/signup/">Get your API key</a>
+      <a class="btn btn-ghost" href="/">Back to home →</a>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container footer-inner">
+    <span class="wordmark wordmark-sm">
+      <img src="../logo.png" alt="klanex logo" class="wordmark-logo" />
+      klanex<span class="wordmark-dot">_</span>
+    </span>
+    <div class="footer-links">
+      <a href="/blog/">Blog</a>
+      <a href="/docs/">Docs</a>
+      <a href="/compare/">Compare</a>
+      <a href="https://github.com/chrassy/klanex-mcp" target="_blank" rel="noopener">MCP server</a>
+    </div>
+    <span class="footer-copy">© 2026 klanex</span>
+  </div>
+</footer>
+
+</body>
+</html>

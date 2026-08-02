@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>How klanex handles agent credentials — KMS-sealed, decrypt-in-memory, never plaintext</title>
+  <meta name="description" content="An AI agent needs a live production credential to do anything useful. Where it lives decides your blast radius. How klanex seals credentials with Cloud KMS at ingest, decrypts them only in worker memory for the duration of one call, stores nothing in plaintext, and fails closed." />
+  <meta property="og:title" content="How klanex handles agent credentials" />
+  <meta property="og:description" content="KMS-sealed at ingest, decrypted only in worker memory, never stored in plaintext, redacted in every read and log. The design, and why it fails closed." />
+  <meta property="og:type" content="article" />
+  <link rel="canonical" href="https://klanexai.com/blog/how-klanex-handles-agent-credentials/" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../styles.css" />
+  <link rel="icon" href="../../logo.png" />
+  <!-- Cloudflare Web Analytics — cookieless, no consent banner needed. -->
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "b17b87f9cb544782b28a4e8b9606c09d"}'></script>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container nav-inner">
+    <a class="wordmark" href="/">
+      <img src="../../logo.png" alt="klanex logo" class="wordmark-logo" />
+      klanex<span class="wordmark-dot">_</span>
+    </a>
+    <div class="nav-links">
+      <a href="/#how">How it works</a>
+      <a href="/#features">Features</a>
+      <a href="/blog/">Blog</a>
+      <a href="/compare/">Compare</a>
+      <a href="/docs/">Docs</a>
+      <a href="/#pricing">Pricing</a>
+    </div>
+    <a class="btn btn-primary btn-sm" href="https://api.klanexai.com/signup/">Get API key</a>
+  </div>
+</nav>
+
+<header class="page-head">
+  <div class="container">
+    <p class="hero-eyebrow"><span class="pill">Security</span></p>
+    <h1>How klanex handles<br />agent <span class="grad">credentials</span></h1>
+    <p>
+      KMS-sealed at ingest, decrypted only in worker memory for the duration of one
+      call, never stored in plaintext, and redacted in every read and log. The design —
+      and why it fails closed.
+    </p>
+    <p style="margin-top: 22px; font-size: 13.5px; color: var(--muted); letter-spacing: 0.02em;">
+      klanex engineering · August 2026 · ~6 min read
+    </p>
+  </div>
+</header>
+
+<section class="section section-alt" style="padding-top: 44px;">
+  <div class="container prose">
+    <p>
+      An AI agent that does anything useful needs a live production credential. A Stripe
+      secret key to issue a refund. A Slack token to post a message. A bearer token to
+      write a row in someone else's system. The moment your agent stops being a chatbot
+      and starts <em>acting</em>, it needs the keys to the things it acts on.
+    </p>
+    <p>
+      Which raises the uncomfortable question every agent platform has to answer, and
+      that a run of 2025–2026 incidents forced into the open: <strong>where does that
+      credential live, and who — or what — can read it back?</strong> When third-party
+      keys leak out of an agent tool, the honest post-mortem is rarely "the model
+      misbehaved." It's that the credential was <em>reachable at all</em> — sitting in a
+      store, a log, or an environment that something else could get to.
+    </p>
+    <p>
+      So klanex starts from a single principle: <strong>you cannot leak what you never
+      stored.</strong> A credential should be unreadable at rest and reconstructable only
+      at the exact moment it's used, in the one component that has to make the call — and
+      nowhere else. Three properties fall out of that:
+    </p>
+    <ul>
+      <li>It's <strong>never persisted in plaintext</strong> — the source of truth only ever holds ciphertext.</li>
+      <li>It's <strong>never in the model's environment</strong> — the LLM generates the intent, not the secret.</li>
+      <li>It's <strong>never in a read or a log</strong> — every API response and every log line is redacted.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2 class="section-title">The lifecycle of one credential</h2>
+    <p class="section-sub">Sealed before anything is written; opened only in the private worker, only in memory, only for the call.</p>
+    <div class="flow" style="margin-top: 44px;">
+      <div class="flow-step">
+        <div class="flow-num">1</div>
+        <h3>Seal at ingest</h3>
+        <p>The public API marshals the target header map and seals it with Cloud KMS <em>before</em> the execution is persisted. The plaintext is then dropped from the request object.</p>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="flow-num">2</div>
+        <h3>Store ciphertext only</h3>
+        <p>Firestore records the ciphertext and the header <em>names</em> for audit — never the values. The queue message carries only the execution ID, not the secret.</p>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="flow-num">3</div>
+        <h3>Open in worker memory</h3>
+        <p>The private worker decrypts just before the call, in memory only. The plaintext is never written back — not even after the doc is re-read to claim it.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section section-alt">
+  <div class="container prose">
+    <h3>1. Sealed before the first write</h3>
+    <p>
+      In the execution model, the field that carries credentials is deliberately marked
+      <code>firestore:"-"</code> — it is structurally impossible to persist it as-is. On
+      the ingest path, before a single byte is written, klanex JSON-marshals the header
+      map and hands it to a sealer. In production that's <strong>Cloud KMS</strong>
+      symmetric encryption; locally it's <strong>AES-256-GCM</strong> with a random nonce
+      and a key that comes from the environment, never disk. What lands in Firestore is
+      the ciphertext (<code>encrypted_headers</code>) plus a sorted list of the header
+      <em>names</em> (<code>header_names</code>) for the audit trail. Then the plaintext
+      map is set to <code>nil</code>.
+    </p>
+    <p>
+      The same is true when the URL itself is the secret — a Slack incoming webhook, a
+      presigned S3 URL. Set <code>seal_url</code> and klanex seals the URL and persists
+      only a redacted <code>scheme://host/[sealed]</code> form. The path that carried the
+      token never touches the database.
+    </p>
+
+    <h3>2. The source of truth holds only ciphertext</h3>
+    <p>
+      This is what actually sits in Firestore for an execution — and what the queue
+      hands to the worker:
+    </p>
+  </div>
+  <div class="container">
+    <div class="terminal" style="max-width: 760px; margin: 8px auto 0;" role="img" aria-label="What Firestore stores for an execution">
+      <div class="terminal-bar">
+        <span class="tdot tdot-r"></span><span class="tdot tdot-y"></span><span class="tdot tdot-g"></span>
+        <span class="terminal-title">firestore: executions/exe_4d0c85a6</span>
+      </div>
+      <pre class="terminal-body"><code><span class="t-cmd">{</span>
+<span class="t-cmd">  "id": "exe_4d0c85a6",</span>
+<span class="t-cmd">  "target": { "method": "POST", "url": "https://hooks.slack.com/[sealed]" },</span>
+<span class="t-cmd">  "header_names":      ["Authorization"],</span>            <span class="t-dim"># names, for audit</span>
+<span class="t-cmd">  "encrypted_headers": "AY6•••132 bytes of KMS ciphertext•••",</span>
+<span class="t-cmd">  "encrypted_url":     "AY6•••96 bytes of KMS ciphertext•••",</span>
+<span class="t-cmd">  "status": "QUEUED"</span>
+<span class="t-cmd">}</span>
+<span class="t-dim"># no key, no token, no secret URL anywhere in the record</span>
+<span class="t-dim"># pub/sub message body: just "exe_4d0c85a6"</span></code></pre>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container prose">
+    <h3>3. Opened only in the worker, only in memory</h3>
+    <p>
+      The worker is a <strong>private</strong> Cloud Run service. It has no public
+      surface and no auth code of its own — it's invoked only by the Pub/Sub push
+      subscription over OIDC, with Cloud Run IAM as the gate. When a message arrives, the
+      worker loads the execution, then decrypts the headers and any sealed URL <em>into
+      memory only</em>, immediately before the call. Those plaintext fields are never
+      persisted back.
+    </p>
+    <p>
+      There's a subtlety that shows the intent. Right after decrypting, the worker
+      atomically <em>claims</em> the execution — which re-reads the document from
+      Firestore, and that fresh copy of course has no plaintext. So klanex deliberately
+      re-attaches the in-memory-only fields onto the claimed doc, makes the call, and
+      lets them fall out of scope. At no point is a decrypted credential written anywhere
+      durable.
+    </p>
+
+    <h3>It fails closed, not open</h3>
+    <p>
+      The most dangerous failure mode for a system like this is a <em>silent downgrade</em>
+      — a misconfigured deploy that quietly starts storing plaintext because the key
+      wasn't wired up. klanex refuses to do that. With no encryption configured, the
+      binary will not boot unless you have explicitly opted into plaintext for local
+      development:
+    </p>
+  </div>
+  <div class="container">
+    <div class="terminal" style="max-width: 760px; margin: 8px auto 0;" role="img" aria-label="klanex refusing to boot without encryption configured">
+      <div class="terminal-bar">
+        <span class="tdot tdot-r"></span><span class="tdot tdot-y"></span><span class="tdot tdot-g"></span>
+        <span class="terminal-title">boot: no encryption configured</span>
+      </div>
+      <pre class="terminal-body"><code><span class="t-dim">$</span> <span class="t-cmd">KLANEX_MODE=ingest ./klanex</span>   <span class="t-dim"># no KLANEX_KMS_KEY, no KLANEX_LOCAL_KEY</span>
+
+<span class="t-err">fatal: no header encryption configured: set KLANEX_KMS_KEY (prod) or</span>
+<span class="t-err">       KLANEX_LOCAL_KEY (dev), or KLANEX_ALLOW_PLAINTEXT=true to</span>
+<span class="t-err">       intentionally store credentials in plaintext</span></code></pre>
+    </div>
+  </div>
+  <div class="container prose" style="margin-top: 40px;">
+    <h3>A decrypt failure never burns a retry</h3>
+    <p>
+      Reliability and security meet in one nice detail. If a decrypt fails — a rotated
+      key, a botched IAM change — that's a <em>configuration</em> problem, not a problem
+      with the target API. So the worker nacks the message for redelivery <strong>without
+      consuming one of the execution's retry attempts</strong>. A key-management mistake
+      can't quietly exhaust an execution's budget and fail it; fix the config and the
+      next delivery just works. The same holds for a managed OAuth token that's been
+      revoked: klanex fails the execution terminally with an <code>llm_hint</code> telling
+      a human to re-authorize the connection — it never loops, and it never leaks.
+    </p>
+
+    <h3>Redacted everywhere a human or model can look</h3>
+    <p>
+      Sealing at rest only helps if the plaintext doesn't leak out some other door.
+      So the read and log paths are redacted by construction:
+    </p>
+    <ul>
+      <li><strong>Every API read</strong> returns header values as <code>REDACTED</code> — <code>GET</code> an execution and you see <code>"Authorization": "REDACTED"</code>, never the token. The MCP tools that proxy the same API inherit this for free.</li>
+      <li><strong>Logs record target hosts, never header values or payloads.</strong> A leaked log file is not a leaked credential.</li>
+      <li><strong>The audit trail shows header names, not values</strong> — enough to answer "what did the agent authenticate with?" without ever exposing the secret.</li>
+    </ul>
+
+    <h3>What this is — and honestly isn't</h3>
+    <p>
+      klanex is not your organization's identity provider or a general secrets manager,
+      and it doesn't pretend to be. It seals the credentials used for the calls it makes
+      on your behalf. And yes — for the duration of a single call, the worker holds the
+      plaintext in memory, because you cannot make an authenticated HTTP request without
+      it. That's the irreducible core. What klanex does is shrink the blast radius around
+      it to the smallest possible shape: a private service with no auth surface, decrypting
+      exactly what it's about to use, persisting none of it, logging none of it, and
+      returning none of it. A compromised read path or a leaked log yields nothing. The
+      store, breached, yields ciphertext.
+    </p>
+    <p>
+      That's the whole idea. You can't leak what you never stored — so don't store it.
+    </p>
+  </div>
+</section>
+
+<section class="section section-cta">
+  <div class="container cta-box">
+    <h2>Give your agent the keys without handing them out.</h2>
+    <p>Start free — 1,000 executions a month, the full reliability engine, no credit card to explore.</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="https://api.klanexai.com/signup/">Get your API key</a>
+      <a class="btn btn-ghost" href="/docs/">Read the docs →</a>
+    </div>
+    <div class="compare-links">
+      <a class="inline-link" href="/blog/">← More from the blog</a>
+      <a class="inline-link" href="/compare/">Compare klanex →</a>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container footer-inner">
+    <span class="wordmark wordmark-sm">
+      <img src="../../logo.png" alt="klanex logo" class="wordmark-logo" />
+      klanex<span class="wordmark-dot">_</span>
+    </span>
+    <div class="footer-links">
+      <a href="/blog/">Blog</a>
+      <a href="/docs/">Docs</a>
+      <a href="/compare/">Compare</a>
+      <a href="https://github.com/chrassy/klanex-mcp" target="_blank" rel="noopener">MCP server</a>
+    </div>
+    <span class="footer-copy">© 2026 klanex</span>
+  </div>
+</footer>
+
+</body>
+</html>

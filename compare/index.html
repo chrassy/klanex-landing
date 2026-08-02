@@ -42,8 +42,8 @@
     <h1>klanex vs. how you<br />run tool calls <span class="grad">today</span></h1>
     <p>
       klanex is the asynchronous execution layer between LLM agents and production APIs.
-      Here's how it lines up against the two most common ways teams handle agent tool calls
-      right now.
+      Here's how it lines up against the tools and patterns teams use to run agent tool
+      calls today — including where the honest answer is "different layer, use both."
     </p>
   </div>
 </header>
@@ -51,6 +51,14 @@
 <section class="section" style="padding-top: 48px;">
   <div class="container">
     <div class="grid grid-3">
+      <a class="card" href="/compare/composio/" style="text-decoration: none;">
+        <h3>vs. Composio →</h3>
+        <p>Composio is an integration catalog with managed OAuth. klanex is a reliability engine for any API. Different layer — durable retries, schema gating, idempotency, and replay a catalog doesn't do.</p>
+      </a>
+      <a class="card" href="/compare/arcade/" style="text-decoration: none;">
+        <h3>vs. Arcade.dev →</h3>
+        <p>Arcade authorizes agents as real users and governs them. klanex makes each authorized call survive production. Two layers that can sit in the same pipeline.</p>
+      </a>
       <a class="card" href="/compare/langchain-retries/" style="text-decoration: none;">
         <h3>vs. framework retries →</h3>
         <p>LangChain's <code>.with_retry()</code> and LlamaIndex's retry helpers run in-process and synchronously. See why durable, async execution survives the agent process — and why teams run both.</p>

@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>klanex vs. Composio — reliability layer vs. integration catalog</title>
+  <meta name="description" content="Composio connects your agent to 1,000+ apps with managed OAuth. klanex is the reliability layer for any API you already have: schema-gating, durable async retries, circuit breakers, idempotency, replay, and a full audit trail. Different layer — here's the honest comparison." />
+  <meta property="og:title" content="Composio vs. klanex" />
+  <meta property="og:description" content="An integration catalog and a reliability engine solve different problems. Composio connects your agent to apps; klanex makes each tool call survive production." />
+  <meta property="og:type" content="article" />
+  <link rel="canonical" href="https://klanexai.com/compare/composio/" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../styles.css" />
+  <link rel="icon" href="../../logo.png" />
+  <!-- Cloudflare Web Analytics — cookieless, no consent banner needed. -->
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "b17b87f9cb544782b28a4e8b9606c09d"}'></script>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container nav-inner">
+    <a class="wordmark" href="/">
+      <img src="../../logo.png" alt="klanex logo" class="wordmark-logo" />
+      klanex<span class="wordmark-dot">_</span>
+    </a>
+    <div class="nav-links">
+      <a href="/#how">How it works</a>
+      <a href="/#features">Features</a>
+      <a href="/compare/">Compare</a>
+      <a href="/docs/">Docs</a>
+      <a href="/#pricing">Pricing</a>
+    </div>
+    <a class="btn btn-primary btn-sm" href="https://api.klanexai.com/signup/">Get API key</a>
+  </div>
+</nav>
+
+<header class="page-head">
+  <div class="container">
+    <p class="hero-eyebrow"><span class="pill">Comparison</span></p>
+    <h1>Composio vs. <span class="grad">klanex</span></h1>
+    <p>
+      Composio is an <strong>integration catalog</strong>: 1,000+ pre-built connectors with
+      managed OAuth, so your agent can reach an app without you building the auth. klanex is
+      an <strong>execution engine</strong>: it makes a single tool call to <em>any</em> API
+      survive hallucinated payloads, rate limits, outages, and crashes. Different layer of the
+      stack — here's the honest comparison, and why the two fit together.
+    </p>
+  </div>
+</header>
+
+<section class="section" style="padding-top: 40px;">
+  <div class="container">
+    <div class="compare-wrap">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>Capability</th>
+            <th>Composio</th>
+            <th class="col-k">klanex</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Pre-built connector catalog (1,000+ apps)</td><td><span class="yes">Yes</span> — this is the core product</td><td class="col-k"><span class="mid">Not a catalog</span> — point it at any API you already have</td></tr>
+          <tr><td>Managed OAuth for hundreds of SaaS apps</td><td><span class="yes">Yes</span> — fully managed, out of the box</td><td class="col-k"><span class="mid">Bring your own</span> — KMS-sealed credential vault + token refresh, not an app catalog</td></tr>
+          <tr><td>Keeps raw credentials out of the model's environment</td><td><span class="yes">Yes</span> — delegated auth</td><td class="col-k"><span class="yes">Yes</span> — KMS-sealed, decrypt-in-worker, redacted in every read</td></tr>
+          <tr><td>Async, durable execution that survives the agent process crashing</td><td><span class="no">No</span> — tool calls resolve in-request</td><td class="col-k"><span class="yes">Yes</span> — returns an <code>execution_id</code> in ~15&nbsp;ms; state persisted, queue redelivers</td></tr>
+          <tr><td>Automatic retries with exponential backoff</td><td><span class="mid">Rate-limit checks</span> — no durable retry engine</td><td class="col-k"><span class="yes">Yes</span> — queue-driven backoff, 10s→600s, DLQ after 15 tries</td></tr>
+          <tr><td>Per-host circuit breakers</td><td><span class="no">No</span></td><td class="col-k"><span class="yes">Yes</span></td></tr>
+          <tr><td>Hard JSON Schema gate that returns a machine-readable fix</td><td><span class="mid">Guardrails</span> — reduces hallucination via tool design</td><td class="col-k"><span class="yes">Yes</span> — <code>422</code> + an <code>llm_hint</code> the model self-corrects from</td></tr>
+          <tr><td>Exactly-once idempotency (a retry can't double-charge)</td><td><span class="mid">Do it yourself</span></td><td class="col-k"><span class="yes">Built in</span> — <code>idempotency_key</code></td></tr>
+          <tr><td>Durable signed webhooks + dead-letter queue</td><td><span class="no">No</span></td><td class="col-k"><span class="yes">Yes</span> — persisted delivery log, retried until the budget is spent</td></tr>
+          <tr><td>Byte-exact replay after an outage — no LLM round-trip</td><td><span class="no">No</span></td><td class="col-k"><span class="yes">Yes</span></td></tr>
+          <tr><td>Human approval before a destructive call</td><td><span class="mid">Permissions</span></td><td class="col-k"><span class="yes">Yes</span> — <code>requires_approval</code> pauses for approve/reject (Slack, dashboard, API)</td></tr>
+          <tr><td>Queryable audit trail of every intent, attempt, and decision</td><td><span class="mid">Partial logging</span></td><td class="col-k"><span class="yes">Yes</span> — Firestore is the source of truth</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="section section-alt">
+  <div class="container prose">
+    <h3>They answer different questions</h3>
+    <p>
+      Composio answers <em>"how does my agent reach a thousand apps without me building
+      OAuth for each one?"</em> That's a real, tedious problem, and a managed connector
+      catalog is a good way to solve it. If your bottleneck is breadth of integrations and
+      auth plumbing, Composio is built for exactly that.
+    </p>
+    <p>
+      klanex answers a different question: <em>"how does one tool call survive contact with
+      production?"</em> A payment, a message, a ticket, a write to a flaky third-party API —
+      the call where a hallucinated field, a 429, a 30-second timeout, or a double-fire turns
+      into a real incident. klanex isn't a catalog and doesn't try to be; you point it at any
+      URL you already have and it owns everything that happens after the intent is submitted.
+    </p>
+    <h3>What a reliability engine does that a catalog structurally doesn't</h3>
+    <ul>
+      <li><strong>Durable, asynchronous execution.</strong> Submit the intent, get an <code>execution_id</code> in milliseconds. The retries, backoff, and per-host circuit breakers live on a queue — independent of whether your agent is still running.</li>
+      <li><strong>A hard schema gate with a self-correction contract.</strong> A hallucinated payload is caught <em>before</em> the call and bounced back with an <code>llm_hint</code> written to be pasted straight into the model's context. Better tool descriptions reduce hallucinations; a schema gate stops the bad call from leaving.</li>
+      <li><strong>Exactly-once semantics.</strong> An <code>idempotency_key</code> means a retry — yours or klanex's — can't double-charge a customer.</li>
+      <li><strong>Recovery you don't have to build.</strong> Durable signed webhooks with a dead-letter queue, and byte-exact replay after an outage — no second trip through the LLM to reconstruct the call.</li>
+    </ul>
+    <h3>Where Composio is honestly ahead</h3>
+    <p>
+      If you need to connect to a long tail of SaaS apps and don't want to touch OAuth,
+      Composio's catalog and managed auth are the shorter path. klanex gives you a KMS-sealed
+      credential vault and OAuth token refresh, but it's not a directory of pre-wired
+      connectors — you bring the API.
+    </p>
+    <h3>So use both, on the calls that matter</h3>
+    <p>
+      Let a catalog (or a raw SDK) handle <em>reaching</em> the app. Route the calls that touch
+      money, external systems, or unreliable endpoints through klanex for the execution
+      guarantees. It's a single HTTP call — or an MCP tool — so it drops in without rewriting
+      your agent.
+    </p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2 class="section-title">Any API — catalog or not</h2>
+    <p class="section-sub">klanex doesn't care whether the target is in someone's connector directory. Point the intent at the URL; you get an execution ID in milliseconds and klanex owns everything after.</p>
+    <div class="terminal" style="max-width: 820px; margin: 44px auto 0;" role="img" aria-label="Submitting a tool call to klanex">
+      <div class="terminal-bar">
+        <span class="tdot tdot-r"></span><span class="tdot tdot-y"></span><span class="tdot tdot-g"></span>
+        <span class="terminal-title">agent → klanex → any API</span>
+      </div>
+      <pre class="terminal-body"><code><span class="t-dim">$</span> <span class="t-cmd">curl -s https://api.klanexai.com/v1/executions -H "X-API-Key: klx_…" -d '{</span>
+<span class="t-cmd">    "target":  { "url": "https://api.your-internal-tool.com/v2/orders", "headers": { … } },</span>
+<span class="t-cmd">    "payload": agent_json,</span>
+<span class="t-cmd">    "payload_schema": { "type": "object", "required": ["order_id", "amount"] },</span>
+<span class="t-cmd">    "idempotency_key": "order-9f2k" }'</span>
+
+<span class="t-ok">{"execution_id": "exe_4d0c85a6", "status": "QUEUED"}</span>   <span class="t-dim"># 14 ms — retries, breakers, webhook are klanex's now</span></code></pre>
+    </div>
+  </div>
+</section>
+
+<section class="section section-cta">
+  <div class="container cta-box">
+    <h2>Connect anywhere. Execute reliably.</h2>
+    <p>Start free — 1,000 executions a month, the full reliability engine, no credit card to explore.</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="https://api.klanexai.com/signup/">Get your API key</a>
+      <a class="btn btn-ghost" href="/docs/">Read the docs →</a>
+    </div>
+    <div class="compare-links">
+      <a class="inline-link" href="/compare/arcade/">Compare: Arcade.dev vs. klanex →</a>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container footer-inner">
+    <span class="wordmark wordmark-sm">
+      <img src="../../logo.png" alt="klanex logo" class="wordmark-logo" />
+      klanex<span class="wordmark-dot">_</span>
+    </span>
+    <div class="footer-links">
+      <a href="/docs/">Docs</a>
+      <a href="/compare/">Compare</a>
+      <a href="https://github.com/chrassy/klanex-mcp" target="_blank" rel="noopener">MCP server</a>
+    </div>
+    <span class="footer-copy">© 2026 klanex</span>
+  </div>
+</footer>
+
+</body>
+</html>

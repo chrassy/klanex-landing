@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>klanex vs. Arcade.dev — execution reliability vs. agent authorization</title>
+  <meta name="description" content="Arcade.dev is an agent authorization and governance runtime: per-user OAuth, identity, and a large MCP tool catalog. klanex is the execution reliability layer for any API: schema-gating, durable async retries, circuit breakers, idempotency, replay, and audit. Different layer — the honest comparison." />
+  <meta property="og:title" content="Arcade.dev vs. klanex" />
+  <meta property="og:description" content="Arcade decides whether an agent is allowed and as whom. klanex makes the call itself survive production. Two different layers of the agent stack." />
+  <meta property="og:type" content="article" />
+  <link rel="canonical" href="https://klanexai.com/compare/arcade/" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../styles.css" />
+  <link rel="icon" href="../../logo.png" />
+  <!-- Cloudflare Web Analytics — cookieless, no consent banner needed. -->
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "b17b87f9cb544782b28a4e8b9606c09d"}'></script>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container nav-inner">
+    <a class="wordmark" href="/">
+      <img src="../../logo.png" alt="klanex logo" class="wordmark-logo" />
+      klanex<span class="wordmark-dot">_</span>
+    </a>
+    <div class="nav-links">
+      <a href="/#how">How it works</a>
+      <a href="/#features">Features</a>
+      <a href="/compare/">Compare</a>
+      <a href="/docs/">Docs</a>
+      <a href="/#pricing">Pricing</a>
+    </div>
+    <a class="btn btn-primary btn-sm" href="https://api.klanexai.com/signup/">Get API key</a>
+  </div>
+</nav>
+
+<header class="page-head">
+  <div class="container">
+    <p class="hero-eyebrow"><span class="pill">Comparison</span></p>
+    <h1>Arcade.dev vs. <span class="grad">klanex</span></h1>
+    <p>
+      Arcade.dev is an <strong>authorization and governance runtime</strong> for agents: it
+      lets an agent act as a real user with per-user OAuth scoping, and ships a large MCP tool
+      catalog with enterprise deployment and compliance. klanex is an <strong>execution
+      reliability layer</strong> for any API: it makes each tool call survive hallucinated
+      payloads, rate limits, outages, and crashes. Arcade decides <em>whether</em> the agent
+      is allowed and <em>as whom</em>; klanex makes the call itself <em>succeed</em>.
+    </p>
+  </div>
+</header>
+
+<section class="section" style="padding-top: 40px;">
+  <div class="container">
+    <div class="compare-wrap">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>Capability</th>
+            <th>Arcade.dev</th>
+            <th class="col-k">klanex</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Per-user identity — agent acts as a real user with scoped OAuth</td><td><span class="yes">Yes</span> — this is the core product</td><td class="col-k"><span class="mid">Out of scope</span> — klanex isn't an identity layer</td></tr>
+          <tr><td>Enterprise deployment (cloud, on-prem, air-gapped, hybrid)</td><td><span class="yes">Yes</span></td><td class="col-k"><span class="mid">Hosted service</span> — scales to zero on GCP</td></tr>
+          <tr><td>SSO / RBAC / published SLAs / compliance program</td><td><span class="yes">Yes</span> — built for regulated enterprises</td><td class="col-k"><span class="mid">Lighter</span> — dashboard SSO + API keys, not an enterprise IAM</td></tr>
+          <tr><td>Large pre-built MCP tool catalog</td><td><span class="yes">Yes</span> — thousands of tools</td><td class="col-k"><span class="mid">Not a catalog</span> — point it at any API you already have</td></tr>
+          <tr><td>Keeps raw credentials out of the model's environment</td><td><span class="yes">Yes</span> — just-in-time auth</td><td class="col-k"><span class="yes">Yes</span> — KMS-sealed, decrypt-in-worker, redacted everywhere</td></tr>
+          <tr><td>Exposes tools over MCP</td><td><span class="yes">Yes</span> — an MCP runtime</td><td class="col-k"><span class="yes">Yes</span> — Streamable HTTP <code>/mcp</code> endpoint</td></tr>
+          <tr><td>Async, durable execution that survives the agent process crashing</td><td><span class="no">No</span> — calls resolve in-request</td><td class="col-k"><span class="yes">Yes</span> — <code>execution_id</code> in ~15&nbsp;ms; state persisted, queue redelivers</td></tr>
+          <tr><td>Automatic retries with exponential backoff + per-host circuit breakers</td><td><span class="mid">Reduces retry cost</span> — no durable retry engine</td><td class="col-k"><span class="yes">Yes</span> — queue-driven backoff (10s→600s), breakers, DLQ after 15 tries</td></tr>
+          <tr><td>Hard JSON Schema gate that returns a machine-readable fix</td><td><span class="mid">Tool quality / evals</span></td><td class="col-k"><span class="yes">Yes</span> — <code>422</code> + an <code>llm_hint</code> the model self-corrects from</td></tr>
+          <tr><td>Exactly-once idempotency (a retry can't double-execute)</td><td><span class="mid">Do it yourself</span></td><td class="col-k"><span class="yes">Built in</span> — <code>idempotency_key</code></td></tr>
+          <tr><td>Durable signed webhooks + dead-letter queue</td><td><span class="no">No</span></td><td class="col-k"><span class="yes">Yes</span> — persisted delivery log, retried until the budget is spent</td></tr>
+          <tr><td>Byte-exact replay after an outage — no LLM round-trip</td><td><span class="no">No</span></td><td class="col-k"><span class="yes">Yes</span></td></tr>
+          <tr><td>Per-call human approval before a destructive action</td><td><span class="mid">Policy / authorization</span></td><td class="col-k"><span class="yes">Yes</span> — <code>requires_approval</code> pauses for approve/reject (Slack, dashboard, API)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="section section-alt">
+  <div class="container prose">
+    <h3>Two different layers of the agent stack</h3>
+    <p>
+      Arcade's center of gravity is <strong>authorization and governance</strong>: an agent
+      acting as a specific user, with the right OAuth scopes, inside an enterprise's identity
+      and compliance boundary. If your hard problem is <em>"which user is this agent acting
+      as, what is it allowed to touch, and can I prove it to an auditor"</em> — especially in
+      a regulated, multi-user, self-hosted setting — that's what Arcade is built for, and it's
+      genuinely strong there.
+    </p>
+    <p>
+      klanex's center of gravity is <strong>per-call execution reliability</strong>. Once a
+      call is authorized, someone still has to make sure it survives a hallucinated field, a
+      429, a 30-second timeout while the model is thinking, a pod recycle mid-flight, and a
+      retry that must not fire twice. klanex owns that: durable async execution, backoff,
+      per-host circuit breakers, idempotency, a dead-letter queue, and byte-exact replay.
+    </p>
+    <h3>What an execution engine does that an authorization runtime doesn't</h3>
+    <ul>
+      <li><strong>Durability.</strong> Submit the intent, get an <code>execution_id</code> in milliseconds; the retries and breakers live on a queue, independent of whether your agent process is still alive.</li>
+      <li><strong>A schema gate with a self-correction contract.</strong> Better tools and evals lower the odds of a bad payload; a hard JSON Schema gate stops the bad call from leaving and hands the model an <code>llm_hint</code> to fix itself.</li>
+      <li><strong>Exactly-once and recovery.</strong> An <code>idempotency_key</code> so a retry can't double-execute, durable signed webhooks with a DLQ, and one-call replay after an outage.</li>
+    </ul>
+    <h3>Where Arcade is honestly ahead</h3>
+    <p>
+      klanex is not an identity or authorization platform. It doesn't do per-user OAuth
+      scoping, on-prem or air-gapped deployment, or an enterprise SSO/RBAC and compliance
+      program. If those are your requirements, Arcade is built for them and klanex isn't
+      trying to be.
+    </p>
+    <h3>They can sit in the same pipeline</h3>
+    <p>
+      Let your authorization layer decide who the agent is and what it may do. Route the
+      calls that touch money, external systems, or flaky APIs through klanex for the execution
+      guarantees. It's a single HTTP call — or an MCP tool — so it drops in without rewriting
+      your agent.
+    </p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2 class="section-title">One call, and the execution is guaranteed</h2>
+    <p class="section-sub">klanex takes the authorized intent and owns everything after: the schema gate, the retries, the breakers, the idempotency, and the signed webhook.</p>
+    <div class="terminal" style="max-width: 820px; margin: 44px auto 0;" role="img" aria-label="Submitting a tool call to klanex">
+      <div class="terminal-bar">
+        <span class="tdot tdot-r"></span><span class="tdot tdot-y"></span><span class="tdot tdot-g"></span>
+        <span class="terminal-title">agent → klanex → target API</span>
+      </div>
+      <pre class="terminal-body"><code><span class="t-dim">$</span> <span class="t-cmd">curl -s https://api.klanexai.com/v1/executions -H "X-API-Key: klx_…" -d '{</span>
+<span class="t-cmd">    "target":  { "url": "https://api.stripe.com/v1/refunds", "headers": { … } },</span>
+<span class="t-cmd">    "payload": agent_json,</span>
+<span class="t-cmd">    "payload_schema": { "type": "object", "required": ["charge_id", "amount"] },</span>
+<span class="t-cmd">    "idempotency_key": "refund-ch_9f2k", "requires_approval": true }'</span>
+
+<span class="t-ok">{"execution_id": "exe_4d0c85a6", "status": "PENDING_APPROVAL"}</span>   <span class="t-dim"># waits for a human, then executes reliably</span></code></pre>
+    </div>
+  </div>
+</section>
+
+<section class="section section-cta">
+  <div class="container cta-box">
+    <h2>Authorize with your stack. Execute with klanex.</h2>
+    <p>Start free — 1,000 executions a month, the full reliability engine, no credit card to explore.</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="https://api.klanexai.com/signup/">Get your API key</a>
+      <a class="btn btn-ghost" href="/docs/">Read the docs →</a>
+    </div>
+    <div class="compare-links">
+      <a class="inline-link" href="/compare/composio/">Compare: Composio vs. klanex →</a>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container footer-inner">
+    <span class="wordmark wordmark-sm">
+      <img src="../../logo.png" alt="klanex logo" class="wordmark-logo" />
+      klanex<span class="wordmark-dot">_</span>
+    </span>
+    <div class="footer-links">
+      <a href="/docs/">Docs</a>
+      <a href="/compare/">Compare</a>
+      <a href="https://github.com/chrassy/klanex-mcp" target="_blank" rel="noopener">MCP server</a>
+    </div>
+    <span class="footer-copy">© 2026 klanex</span>
+  </div>
+</footer>
+
+</body>
+</html>

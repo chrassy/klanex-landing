@@ -119,13 +119,13 @@
       <div class="terminal">
         <div class="terminal-bar">
           <span class="tdot tdot-r"></span><span class="tdot tdot-y"></span><span class="tdot tdot-g"></span>
-          <span class="terminal-title">agent → klanex → httpbin</span>
+          <span class="terminal-title">agent → klanex → httpbingo</span>
         </div>
         <pre class="terminal-body"><code><span class="t-dim">$</span> <span class="t-cmd">curl -s https://api.sandbox.klanexai.com/v1/executions \</span>
 <span class="t-cmd">    -H "X-API-Key: klx_test_9f2k7c1e4b8a…" \</span>
 <span class="t-cmd">    -H "Content-Type: application/json" \</span>
 <span class="t-cmd">    -d '{</span>
-<span class="t-cmd">      "target":  { "url": "https://httpbin.org/post" },</span>
+<span class="t-cmd">      "target":  { "url": "https://httpbingo.org/post" },</span>
 <span class="t-cmd">      "payload": { "charge_id": "ch_9f2k", "amount": 500 },</span>
 <span class="t-cmd">      "payload_schema": {</span>
 <span class="t-cmd">        "type": "object",</span>
@@ -144,7 +144,7 @@
         <div class="step-num">3</div>
         <h3>Read the record back</h3>
       </div>
-      <p class="step-note">Every attempt is on the execution document, queryable for as long as your retention window allows. Read it back within a few seconds and you will often catch <code>RUNNING</code> or <code>RETRYING</code> instead: httpbin.org is a free public host and frequently slow, so a real run can take several attempts before it settles. That is the engine working, not a failure. Poll again and watch <code>attempts</code> climb.</p>
+      <p class="step-note">Every attempt is on the execution document, queryable for as long as your retention window allows. Run it immediately after step 2 and you may still catch <code>QUEUED</code> or <code>RUNNING</code>; give it a second and read it again.</p>
       <div class="terminal">
         <div class="terminal-bar">
           <span class="tdot tdot-r"></span><span class="tdot tdot-y"></span><span class="tdot tdot-g"></span>
@@ -156,10 +156,10 @@
 <span class="t-ok">{</span>
 <span class="t-ok">  "execution_id": "exe_4d0c85a6",</span>
 <span class="t-ok">  "status":       "SUCCEEDED",</span>
-<span class="t-ok">  "target":       { "method": "POST", "url": "https://httpbin.org/post" },</span>
+<span class="t-ok">  "target":       { "method": "POST", "url": "https://httpbingo.org/post" },</span>
 <span class="t-ok">  "attempts":     1,</span>
 <span class="t-ok">  "max_attempts": 5,</span>
-<span class="t-ok">  "result":       { "status_code": 200, "body": "{\"json\": {\"amount\": 500, \"charge_id\": \"ch_9f2k\"}, …}" },</span>
+<span class="t-ok">  "result":       { "status_code": 200, "body": "{\"args\": {}, \"headers\": {…}, \"method\": \"POST\", \"json\": {\"amount\": 500, \"charge_id\": \"ch_9f2k\"}}" },</span>
 <span class="t-ok">  "created_at":   "2026-08-11T09:14:22Z",</span>
 <span class="t-ok">  "updated_at":   "2026-08-11T09:14:23Z"</span>
 <span class="t-ok">}</span></code></pre>
@@ -168,7 +168,7 @@
 
     <div class="callout">
       <strong>Want to watch the retries?</strong> Point <code>target.url</code> at
-      <code>https://httpbin.org/status/503</code> and run it again. klanex absorbs the
+      <code>https://httpbingo.org/status/503</code> and run it again. klanex absorbs the
       5xx with exponential backoff, climbs through its attempt budget, and only then
       fails the execution terminally with a classified error code. Your agent gets one
       answer at the end instead of five failures in its context window.

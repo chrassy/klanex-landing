@@ -3,15 +3,15 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>klanex sandbox — run a real tool call, no signup</title>
+  <title>klanex sandbox: run a real tool call, no signup</title>
   <meta name="description" content="Mint a throwaway klanex sandbox key with one curl, run a real API call through the reliability engine, and read the audit record back. No account, no card, 100 executions." />
-  <meta property="og:title" content="klanex sandbox — run a real tool call, no signup" />
+  <meta property="og:title" content="klanex sandbox: run a real tool call, no signup" />
   <meta property="og:description" content="One curl for a key. One curl for a real execution. Retries, schema gate, and audit trail included." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://klanexai.com/playground/" />
   <meta property="og:image" content="https://klanexai.com/og.png" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="klanex sandbox — run a real tool call, no signup" />
+  <meta name="twitter:title" content="klanex sandbox: run a real tool call, no signup" />
   <meta name="twitter:description" content="One curl for a key. One curl for a real execution." />
   <meta name="twitter:image" content="https://klanexai.com/og.png" />
   <link rel="canonical" href="https://klanexai.com/playground/" />
@@ -144,7 +144,7 @@
         <div class="step-num">3</div>
         <h3>Read the record back</h3>
       </div>
-      <p class="step-note">Every attempt is on the execution document, queryable for as long as your retention window allows.</p>
+      <p class="step-note">Every attempt is on the execution document, queryable for as long as your retention window allows. Read it back within a few seconds and you will often catch <code>RUNNING</code> or <code>RETRYING</code> instead: httpbin.org is a free public host and frequently slow, so a real run can take several attempts before it settles. That is the engine working, not a failure. Poll again and watch <code>attempts</code> climb.</p>
       <div class="terminal">
         <div class="terminal-bar">
           <span class="tdot tdot-r"></span><span class="tdot tdot-y"></span><span class="tdot tdot-g"></span>

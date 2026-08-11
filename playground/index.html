@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>klanex sandbox: run a real tool call, no signup</title>
+  <meta name="description" content="Mint a throwaway klanex sandbox key with one curl, run a real API call through the reliability engine, and read the audit record back. No account, no card, 100 executions." />
+  <meta property="og:title" content="klanex sandbox: run a real tool call, no signup" />
+  <meta property="og:description" content="One curl for a key. One curl for a real execution. Retries, schema gate, and audit trail included." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://klanexai.com/playground/" />
+  <meta property="og:image" content="https://klanexai.com/og.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="klanex sandbox: run a real tool call, no signup" />
+  <meta name="twitter:description" content="One curl for a key. One curl for a real execution." />
+  <meta name="twitter:image" content="https://klanexai.com/og.png" />
+  <link rel="canonical" href="https://klanexai.com/playground/" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../styles.css" />
+  <link rel="icon" href="../logo.png" />
+  <!-- Cloudflare Web Analytics — cookieless, no consent banner needed. -->
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "b17b87f9cb544782b28a4e8b9606c09d"}'></script>
+  <style>
+    /* Numbered steps, local to this page: a small gradient chip in front of a
+       step heading, sitting directly above its terminal block. */
+    .step { max-width: 920px; margin: 0 auto; }
+    .step + .step { margin-top: 56px; }
+    .step-head { display: flex; align-items: center; gap: 12px; }
+    .step-num {
+      font-family: var(--font-mono); font-weight: 600; font-size: 13px;
+      width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--grad); color: #fff;
+    }
+    .step-head h3 { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+    .step-note { color: var(--muted); font-size: 14.5px; margin: 10px 0 0 40px; }
+    .step .terminal { margin-top: 18px; }
+    .callout {
+      max-width: 920px; margin: 44px auto 0; padding: 16px 20px;
+      border: 1px solid rgba(0, 212, 255, 0.3); border-radius: var(--radius);
+      background: rgba(0, 212, 255, 0.04); color: var(--muted); font-size: 14.5px;
+    }
+    .callout strong { color: var(--text); }
+    .limits { max-width: 920px; margin: 52px auto 0; }
+    .limits li {
+      color: var(--muted); font-size: 14.5px; list-style: none;
+      padding: 7px 0 7px 24px; position: relative;
+    }
+    .limits li::before { content: "\2192"; position: absolute; left: 0; color: var(--accent-1); }
+    @media (max-width: 600px) { .step-note { margin-left: 0; } }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container nav-inner">
+    <a class="wordmark" href="/">
+      <img src="../logo.png" alt="klanex logo" class="wordmark-logo" />
+      klanex<span class="wordmark-dot">_</span>
+    </a>
+    <div class="nav-links">
+      <a href="/#how">How it works</a>
+      <a href="/#features">Features</a>
+      <a href="/compare/">Compare</a>
+      <a href="/blog/">Blog</a>
+      <a href="/docs/">Docs</a>
+    </div>
+    <a class="btn btn-primary btn-sm" href="https://api.klanexai.com/signup/">Get API key</a>
+  </div>
+</nav>
+
+<header class="page-head">
+  <div class="container">
+    <p class="hero-eyebrow"><span class="pill">Sandbox</span></p>
+    <h1>Run a real API call<br />through <span class="grad">klanex</span></h1>
+    <p>
+      Two curls and about a minute. The first mints a throwaway key, the second
+      runs a genuine HTTP call through the reliability engine. No account, no
+      card, nothing to uninstall afterwards.
+    </p>
+  </div>
+</header>
+
+<section class="section">
+  <div class="container">
+
+    <div class="step">
+      <div class="step-head">
+        <div class="step-num">1</div>
+        <h3>Get a sandbox key</h3>
+      </div>
+      <p class="step-note">No signup. The key is disposable and rate limited per IP, so grab one and move on.</p>
+      <div class="terminal">
+        <div class="terminal-bar">
+          <span class="tdot tdot-r"></span><span class="tdot tdot-y"></span><span class="tdot tdot-g"></span>
+          <span class="terminal-title">mint a key</span>
+        </div>
+        <pre class="terminal-body"><code><span class="t-dim">$</span> <span class="t-cmd">curl -sX POST https://api.sandbox.klanexai.com/playground/key</span>
+
+<span class="t-ok">{</span>
+<span class="t-ok">  "api_key":             "klx_test_9f2k7c1e4b8a…",</span>
+<span class="t-ok">  "webhook_secret":      "whsec_test_5d3a…",</span>
+<span class="t-ok">  "base_url":            "https://api.sandbox.klanexai.com",</span>
+<span class="t-ok">  "mcp_url":             "https://api.sandbox.klanexai.com/mcp",</span>
+<span class="t-ok">  "included_executions": 100,</span>
+<span class="t-ok">  "expires_at":          "2026-08-18T09:14:22Z"</span>
+<span class="t-ok">}</span></code></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-head">
+        <div class="step-num">2</div>
+        <h3>Send a tool-use intent</h3>
+      </div>
+      <p class="step-note">A real POST to a real host. klanex validates the payload against your schema, queues it, and hands back an execution ID in milliseconds.</p>
+      <div class="terminal">
+        <div class="terminal-bar">
+          <span class="tdot tdot-r"></span><span class="tdot tdot-y"></span><span class="tdot tdot-g"></span>
+          <span class="terminal-title">agent → klanex → httpbin</span>
+        </div>
+        <pre class="terminal-body"><code><span class="t-dim">$</span> <span class="t-cmd">curl -s https://api.sandbox.klanexai.com/v1/executions \</span>
+<span class="t-cmd">    -H "X-API-Key: klx_test_9f2k7c1e4b8a…" \</span>
+<span class="t-cmd">    -H "Content-Type: application/json" \</span>
+<span class="t-cmd">    -d '{</span>
+<span class="t-cmd">      "target":  { "url": "https://httpbin.org/post" },</span>
+<span class="t-cmd">      "payload": { "charge_id": "ch_9f2k", "amount": 500 },</span>
+<span class="t-cmd">      "payload_schema": {</span>
+<span class="t-cmd">        "type": "object",</span>
+<span class="t-cmd">        "required": ["charge_id", "amount"],</span>
+<span class="t-cmd">        "properties": { "amount": { "type": "integer" } }</span>
+<span class="t-cmd">      },</span>
+<span class="t-cmd">      "idempotency_key": "demo-ch_9f2k"</span>
+<span class="t-cmd">    }'</span>
+
+<span class="t-ok">{"execution_id": "exe_4d0c85a6", "status": "QUEUED"}</span></code></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-head">
+        <div class="step-num">3</div>
+        <h3>Read the record back</h3>
+      </div>
+      <p class="step-note">Every attempt is on the execution document, queryable for as long as your retention window allows. Read it back within a few seconds and you will often catch <code>RUNNING</code> or <code>RETRYING</code> instead: httpbin.org is a free public host and frequently slow, so a real run can take several attempts before it settles. That is the engine working, not a failure. Poll again and watch <code>attempts</code> climb.</p>
+      <div class="terminal">
+        <div class="terminal-bar">
+          <span class="tdot tdot-r"></span><span class="tdot tdot-y"></span><span class="tdot tdot-g"></span>
+          <span class="terminal-title">what actually happened</span>
+        </div>
+        <pre class="terminal-body"><code><span class="t-dim">$</span> <span class="t-cmd">curl -s https://api.sandbox.klanexai.com/v1/executions/exe_4d0c85a6 \</span>
+<span class="t-cmd">    -H "X-API-Key: klx_test_9f2k7c1e4b8a…"</span>
+
+<span class="t-ok">{</span>
+<span class="t-ok">  "execution_id": "exe_4d0c85a6",</span>
+<span class="t-ok">  "status":       "SUCCEEDED",</span>
+<span class="t-ok">  "target":       { "method": "POST", "url": "https://httpbin.org/post" },</span>
+<span class="t-ok">  "attempts":     1,</span>
+<span class="t-ok">  "max_attempts": 5,</span>
+<span class="t-ok">  "result":       { "status_code": 200, "body": "{\"json\": {\"amount\": 500, \"charge_id\": \"ch_9f2k\"}, …}" },</span>
+<span class="t-ok">  "created_at":   "2026-08-11T09:14:22Z",</span>
+<span class="t-ok">  "updated_at":   "2026-08-11T09:14:23Z"</span>
+<span class="t-ok">}</span></code></pre>
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>Want to watch the retries?</strong> Point <code>target.url</code> at
+      <code>https://httpbin.org/status/503</code> and run it again. klanex absorbs the
+      5xx with exponential backoff, climbs through its attempt budget, and only then
+      fails the execution terminally with a classified error code. Your agent gets one
+      answer at the end instead of five failures in its context window.
+    </div>
+
+    <div class="callout">
+      <strong>Send it a payload that breaks the schema</strong> (drop <code>amount</code>,
+      or make it a string) and the call is rejected in milliseconds with an
+      <code>llm_hint</code> written to be pasted straight back into a model's context.
+      Rejected payloads never count against your quota.
+    </div>
+
+  </div>
+</section>
+
+<section class="section section-alt">
+  <div class="container">
+    <h2 class="section-title">Or skip the curl and<br /><span class="grad">hand it to your agent</span></h2>
+    <p class="section-sub">The same sandbox key works over MCP. One command and your agent has the whole engine as native tools.</p>
+    <div class="terminal">
+      <div class="terminal-bar">
+        <span class="tdot tdot-r"></span><span class="tdot tdot-y"></span><span class="tdot tdot-g"></span>
+        <span class="terminal-title">agent ← klanex over MCP</span>
+      </div>
+      <pre class="terminal-body"><code><span class="t-dim">$</span> <span class="t-cmd">claude mcp add --transport http klanex https://api.sandbox.klanexai.com/mcp \</span>
+<span class="t-cmd">      --header "X-API-Key: klx_test_9f2k7c1e4b8a…"</span>
+
+<span class="t-dim"># your agent can now call, as native tools:</span>
+<span class="t-ok">execute</span>  <span class="t-ok">get_execution</span>  <span class="t-ok">list_executions</span>  <span class="t-ok">replay_execution</span>  <span class="t-ok">get_usage</span>  <span class="t-ok">list_connections</span>
+
+<span class="t-dim">$</span> <span class="t-cmd">KLANEX_API_KEY=klx_test_… npx -y klanex-mcp</span>   <span class="t-dim"># stdio-only clients</span></code></pre>
+    </div>
+    <p class="section-sub" style="margin-top: 32px;">Works in Claude Code, Claude Desktop, Cursor, VS Code, and Windsurf. Full setup in the <a class="inline-link" href="/docs/#mcp">MCP docs</a>. One caveat on a sandbox key: <code>replay_execution</code> is a paid-plan feature, so it will come back as a permission error until you upgrade.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2 class="section-title">What the sandbox key is</h2>
+    <ul class="limits">
+      <li><strong>100 executions</strong>, then it stops. Retries and schema rejections are not counted.</li>
+      <li><strong>Seven days</strong>, then the tenant is deleted and the key stops resolving. Nothing to cancel.</li>
+      <li><strong>Sandbox only.</strong> This endpoint does not exist on the production deployment, so a faucet key can never be a live key.</li>
+      <li><strong>Public hosts only.</strong> The worker refuses private and link-local addresses, so a sandbox key cannot be pointed at somebody's internal network.</li>
+      <li><strong>No durability promise.</strong> It is for trying things. Anything you care about belongs on a real account.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="section section-cta">
+  <div class="container cta-box">
+    <h2>Liked what it did with that call?</h2>
+    <p>A free account is the same engine with 1,000 executions a month, durable history, and no seven-day clock.</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="https://api.klanexai.com/signup/">Create a free account</a>
+      <a class="btn btn-ghost" href="/docs/">Read the docs →</a>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container footer-inner">
+    <span class="wordmark wordmark-sm">
+      <img src="../logo.png" alt="klanex logo" class="wordmark-logo" />
+      klanex<span class="wordmark-dot">_</span>
+    </span>
+    <div class="footer-links">
+      <a href="/">Home</a>
+      <a href="/docs/">Docs</a>
+      <a href="/blog/">Blog</a>
+      <a href="/compare/">Compare</a>
+      <a href="https://api.klanexai.com/openapi.yaml" target="_blank" rel="noopener">API reference</a>
+      <a href="https://github.com/chrassy/klanex-mcp" target="_blank" rel="noopener">MCP server</a>
+    </div>
+    <span class="footer-copy">© 2026 klanex</span>
+  </div>
+</footer>
+
+</body>
+</html>

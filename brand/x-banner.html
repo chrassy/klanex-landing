@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* Tokens lifted verbatim from klanex-landing/styles.css so the banner and
+     the site are the same object. */
+  :root {
+    --bg: #08080d;
+    --text: #eceaf6;
+    --muted: #9b98b3;
+    --accent-1: #7c5cff;
+    --accent-2: #00d4ff;
+    --dim: #5d5a78;
+    --ok: #4ade80;
+    --warn: #fbbf24;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+    --ui: "Inter", -apple-system, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1500px; height: 500px; overflow: hidden; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    position: relative;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Same two-radial glow as the site hero, pulled toward the top so the
+     bottom-left stays dark behind the avatar. */
+  .glow {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(760px 380px at 34% 6%, rgba(124, 92, 255, 0.30), transparent 68%),
+      radial-gradient(700px 360px at 70% 0%, rgba(0, 212, 255, 0.17), transparent 70%);
+  }
+
+  /* Faint scanline texture, keeps the flat black from looking like a slide. */
+  .grid {
+    position: absolute; inset: 0;
+    background-image: repeating-linear-gradient(
+      0deg, rgba(255,255,255,0.022) 0 1px, transparent 1px 3px
+    );
+  }
+
+  .stage {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    /* A hair above centre. The avatar lands bottom-left and this stack is
+       centred, so they never actually collide. */
+    padding-bottom: 14px;
+  }
+
+  .wordmark {
+    font-family: var(--mono);
+    font-size: 25px; font-weight: 600; letter-spacing: -0.5px;
+    color: var(--text);
+    margin-bottom: 30px;
+  }
+  .wordmark .dot {
+    background: linear-gradient(100deg, var(--accent-1), var(--accent-2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+
+  .seq {
+    font-family: var(--mono);
+    font-size: 40px; font-weight: 500; letter-spacing: -0.6px;
+    white-space: nowrap;
+    display: flex; align-items: baseline; gap: 18px;
+  }
+  .lbl  { color: var(--dim); }
+  .arr  { color: var(--accent-1); }
+  .warn { color: var(--warn); }
+  .ok   { color: var(--ok); }
+  /* Holds its shape when X scales the banner down on a phone. */
+  .sep  { color: rgba(255,255,255,0.18); padding: 0 14px; font-weight: 400; }
+  .done {
+    font-weight: 700;
+    background: linear-gradient(100deg, var(--accent-1), var(--accent-2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+
+  .kicker {
+    font-family: var(--ui);
+    font-size: 25px; font-weight: 500; letter-spacing: -0.2px;
+    color: var(--muted);
+    margin-top: 34px;
+  }
+  .kicker b { color: var(--text); font-weight: 600; }
+
+  /* Bottom-right, out of the avatar's way. */
+  .url {
+    position: absolute; right: 54px; bottom: 36px;
+    font-family: var(--mono); font-size: 18px; letter-spacing: -0.2px;
+    color: #7d7a96;
+  }
+</style>
+</head>
+<body>
+  <div class="glow"></div>
+  <div class="grid"></div>
+
+  <div class="stage">
+    <div class="wordmark">klanex<span class="dot">_</span></div>
+
+    <div class="seq">
+      <span class="lbl">attempt 1</span><span class="arr">&rarr;</span><span class="warn">429</span>
+      <span class="sep">|</span>
+      <span class="lbl">attempt 2</span><span class="arr">&rarr;</span><span class="ok">200 OK</span>
+      <span class="sep">|</span>
+      <span class="done">SUCCEEDED</span>
+    </div>
+
+    <div class="kicker">your agent never saw the <b>429</b>.</div>
+  </div>
+
+  <div class="url">klanexai.com/playground</div>
+</body>
+</html>

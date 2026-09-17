@@ -62,6 +62,7 @@
         <tbody>
           <tr><td>The model hallucinates a payload field</td><td>A cryptic <code>400</code> comes back for the model to decode, far from where it went wrong</td><td class="col-k">Schema-gated in milliseconds; an <code>llm_hint</code> is written for the model to self-correct</td></tr>
           <tr><td>The target returns 429 / 5xx / times out</td><td>The agent stalls, crashes, or you hand-roll retry logic</td><td class="col-k">Absorbed with backoff and per-host circuit breakers — the agent never blocks</td></tr>
+          <tr><td>The API answers <code>200</code> but the body says it failed</td><td>Your code sees 200, reports success, and the agent moves on</td><td class="col-k">The body is checked; the call fails as <code>TARGET_REJECTED</code> with the response kept and an <code>llm_hint</code></td></tr>
           <tr><td>The agent thinks for 30–60&nbsp;s mid-call</td><td>The held-open HTTP connection times out</td><td class="col-k">Asynchronous: an <code>execution_id</code> in ~15&nbsp;ms, result via signed webhook or poll</td></tr>
           <tr><td>Credentials</td><td>Raw API keys live in the model's environment</td><td class="col-k">KMS-sealed vault; decrypted only in a worker, redacted everywhere else</td></tr>
           <tr><td>A retry fires twice</td><td>Possible double-charge or double-send</td><td class="col-k">Exactly-once with an <code>idempotency_key</code></td></tr>

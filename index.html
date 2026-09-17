@@ -155,7 +155,7 @@
       <div class="flow-step">
         <div class="flow-num">3</div>
         <h3>Execute</h3>
-        <p>Isolated workers make the real call with per-host circuit breakers, timeouts, and exponential backoff on 429s, 5xxs, and outages.</p>
+        <p>Isolated workers make the real call with per-host circuit breakers, timeouts, and exponential backoff on 429s, 5xxs, and outages. A 200 only counts once its body agrees.</p>
       </div>
       <div class="flow-arrow">→</div>
       <div class="flow-step">
@@ -207,6 +207,48 @@
       <div class="card">
         <h3>Per-tenant rate limits</h3>
         <p>Token buckets per API key keep a runaway agent loop from taking the platform — or your budget — down with it.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section section-alt" id="silent-failures">
+  <div class="container">
+    <p class="hero-eyebrow centered"><span class="pill">New: failures hiding in 200 responses</span></p>
+    <h2 class="section-title">A <code>200 OK</code> is not always a success.<br /><span class="grad">klanex checks what the body says.</span></h2>
+    <p class="section-sub">Slack answers a failed call with HTTP 200 and <code>"ok": false</code>. GraphQL puts its errors inside a 200. Plenty of APIs describe the failure in a sentence. Anything that only checks status codes marks those calls as done, and your agent moves on believing the message was sent.</p>
+
+    <div class="terminal" role="img" aria-label="A Slack call that returned HTTP 200 reported as a failed execution">
+      <div class="terminal-bar">
+        <span class="tdot tdot-r"></span><span class="tdot tdot-y"></span><span class="tdot tdot-g"></span>
+        <span class="terminal-title">slack.com → 200 → FAILED</span>
+      </div>
+      <pre class="terminal-body"><code><span class="t-dim">$</span> <span class="t-cmd">curl -s https://api.klanexai.com/v1/executions/exe_9b73… -H "X-API-Key: klx_…"</span>
+
+<span class="t-cmd">{</span>
+<span class="t-err">  "status": "FAILED",</span>
+<span class="t-cmd">  "error": {</span>
+<span class="t-err">    "code": "TARGET_REJECTED",</span>
+<span class="t-cmd">    "message": "target returned 200 but its response body reports a failure (\"ok\" is false)",</span>
+<span class="t-ok">    "llm_hint": "The target API returned HTTP 200, but its response body says the operation</span>
+<span class="t-ok">                 did not succeed. ... verify that before resubmitting so it is not performed twice."</span>
+<span class="t-cmd">  },</span>
+<span class="t-cmd">  "result": { "status_code": 200, "body": "{\"ok\":false,\"error\":\"not_authed\"}" }</span>
+<span class="t-cmd">}</span></code></pre>
+    </div>
+
+    <div class="grid grid-3">
+      <div class="card">
+        <h3>Known conventions, caught by rules</h3>
+        <p><code>"ok": false</code>, <code>"success": false</code>, an error <code>status</code>, and GraphQL <code>errors</code> with no <code>data</code> fail the execution instantly. No model call, no guesswork.</p>
+      </div>
+      <div class="card">
+        <h3>Everything else, judged by a model</h3>
+        <p>A 200 body that reads like a failure gets one fast yes/no check from TypeSafe's Jev model. Only a confident "this failed" changes the outcome. If the check is unsure or unavailable, the success stands.</p>
+      </div>
+      <div class="card">
+        <h3>The evidence stays on the record</h3>
+        <p>The failed execution keeps the exact response, the message names which check fired, and the <code>llm_hint</code> tells your agent what to fix. The check sees the response body and host, never your payload or credentials.</p>
       </div>
     </div>
   </div>

@@ -174,13 +174,21 @@
   <tr><td><code>TARGET_TIMEOUT</code></td><td>retried</td><td>Target didn't answer in time.</td></tr>
   <tr><td><code>TARGET_RATE_LIMITED</code></td><td>retried</td><td>Target returned 429.</td></tr>
   <tr><td><code>TARGET_UNAVAILABLE</code></td><td>retried</td><td>Target 5xx / connection failure.</td></tr>
-  <tr><td><code>TARGET_REJECTED</code></td><td>yes</td><td>Target 4xx — retrying won't help; correct the request.</td></tr>
+  <tr><td><code>TARGET_REJECTED</code></td><td>yes</td><td>Target 4xx, or a <a href="#2xx-failures">2xx whose body reports a failure</a>. Retrying won't help; correct the request.</td></tr>
   <tr><td><code>CIRCUIT_OPEN</code></td><td>retried</td><td>Host breaker open; klanex waits it out.</td></tr>
   <tr><td><code>ATTEMPTS_EXHAUSTED</code></td><td>yes</td><td>Retry budget spent.</td></tr>
   <tr><td><code>APPROVAL_REJECTED</code></td><td>yes</td><td>A human said no.</td></tr>
   <tr><td><code>CONNECTION_UNAUTHORIZED</code></td><td>yes</td><td>Vault connection can't mint a valid token — reauthorize it.</td></tr>
   <tr><td><code>RATE_LIMITED</code></td><td>429 at submit</td><td>Your tenant rate limit; honor <code>Retry-After</code>.</td></tr>
 </table>
+
+<h3 id="2xx-failures">Failures inside 2xx responses</h3>
+<p>Some APIs report errors with a success status: Slack returns <code>{"ok": false}</code>, GraphQL returns an <code>errors</code> array. klanex checks every 2xx body and fails the execution as <code>TARGET_REJECTED</code> when the body says the operation did not happen.</p>
+<ul>
+  <li><strong>Rules</strong> run on every response: a top-level <code>"ok": false</code> or <code>"success": false</code>, a <code>"status"</code> of <code>error</code>, <code>fail</code>, <code>failed</code> or <code>failure</code>, or a non-empty <code>errors</code> array with no <code>data</code>. An explicit <code>"ok": true</code> or <code>"success": true</code> is accepted as is.</li>
+  <li><strong>A model check</strong> covers the rest. Bodies that mention failure words (<code>error</code>, <code>invalid</code>, <code>denied</code>, ...) get a yes/no judgment from TypeSafe's Jev model, and only a confident "this reports a failure" fails the execution. An unsure answer or an unavailable model keeps the success. The check receives the HTTP method, target host, status code and the first 8&nbsp;KB of the response body. Your payload, headers and full URL are never sent.</li>
+</ul>
+<p>The failed execution keeps <code>result</code> (status code and body) so you can see exactly what the target said, and <code>error.message</code> names the check that fired. Bodies that merely mention an error as data, such as a list of log entries, stay successful.</p>
 
 <h2 id="vault">Token vault (connections)</h2>
 <p>Store credentials once, reference them by ID — agents never see raw secrets, and OAuth tokens refresh automatically.</p>

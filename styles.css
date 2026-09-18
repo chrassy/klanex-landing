@@ -139,7 +139,7 @@ h1 {
 /* Eyebrow reused outside the centered hero, and the card grid / registry
    links that follow the MCP terminal, which the rules above don't cover. */
 .hero-eyebrow.centered { text-align: center; }
-.terminal + .grid { margin-top: 52px; }
+.terminal + .grid, .code-tabs + .grid { margin-top: 52px; }
 .mcp-links { margin-top: 32px; margin-bottom: 0; }
 
 /* ── cards ───────────────────────────────────────────────────────────── */

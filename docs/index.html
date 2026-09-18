@@ -290,9 +290,42 @@ GET    /v1/connections/{id}/authorize     begin OAuth consent (browser)</code></
 
 <h2 id="sdks">SDKs</h2>
 <ul>
-  <li><strong>TypeScript / Node</strong> — <a href="https://github.com/chrassy/klanex-js">github.com/chrassy/klanex-js</a>: zero-dep client, webhook verification, key rotation.</li>
-  <li><strong>Python</strong> — <a href="https://github.com/chrassy/klanex-python">github.com/chrassy/klanex-python</a>: sync + async clients, webhook verification, plus <code>klanex.adapters</code> for LangChain, CrewAI, and Google ADK.</li>
+  <li><strong>TypeScript / Node</strong>: <code>npm install klanex</code> (<a href="https://github.com/chrassy/klanex-js">github.com/chrassy/klanex-js</a>). Zero-dependency client, webhook verification, key rotation, plus adapters for the Vercel AI SDK (<code>klanex/ai</code>) and the OpenAI Agents SDK (<code>klanex/openai-agents</code>).</li>
+  <li><strong>Python</strong>: <code>pip install klanex</code> (<a href="https://github.com/chrassy/klanex-python">github.com/chrassy/klanex-python</a>). Sync and async clients, webhook verification, plus <code>klanex.adapters</code> for LangGraph / LangChain, the OpenAI Agents SDK, CrewAI, and Google ADK.</li>
 </ul>
+
+<h3 id="frameworks">Agent framework adapters</h3>
+<p>An adapter turns one API call into a native tool. The model's tool input becomes the request payload, and the model never sees the URL or credentials. The tool returns text the model can act on:</p>
+<table>
+  <tr><th>Outcome</th><th>The tool returns</th></tr>
+  <tr><td>Succeeded</td><td>The target's response.</td></tr>
+  <tr><td>Rejected, or failed the schema gate</td><td>The <code>llm_hint</code>, naming the bad field when klanex can tell.</td></tr>
+  <tr><td>Waiting for approval, or still running after the wait timeout (default 2 minutes)</td><td>A note that the action is in progress and the tool must not be called again for it.</td></tr>
+  <tr><td>Bad API key, quota, or network error</td><td>Nothing: the error is raised for the framework to surface to you.</td></tr>
+</table>
+<p>The framework's tool call ID becomes the <code>idempotency_key</code>, so a resumed or retried step never runs the action twice (turn it off with <code>idempotency: false</code> / <code>idempotency=False</code>). A plain JSON Schema is also sent as <code>payload_schema</code>, because these frameworks pass JSON Schema input through without validating it.</p>
+<pre><code>// Vercel AI SDK (ai 5, 6, or 7)
+import { klanexTool } from "klanex/ai";
+const refund = klanexTool(klanex, {
+  description: "Refund a Stripe charge",
+  inputSchema: z.object({ charge: z.string(), amount: z.number().int() }),
+  target: { url: "https://api.stripe.com/v1/refunds", connectionId: "con_…" },
+});
+await generateText({ model, tools: { refund }, stopWhen: stepCountIs(5), prompt });
+
+// OpenAI Agents SDK
+import { klanexTool } from "klanex/openai-agents";
+const refund = klanexTool(klanex, { name: "create_refund", description, parameters, target });</code></pre>
+<pre><code># LangGraph / LangChain: pip install "klanex[langgraph]"
+from klanex.adapters import langchain_tool
+refund = langchain_tool(klanex, name="create_refund", description="Refund a Stripe charge",
+                        target={"url": "https://api.stripe.com/v1/refunds", "connection_id": "con_…"},
+                        payload_schema=refund_schema)
+agent = create_agent(model, tools=[refund])
+
+# OpenAI Agents SDK (Python): pip install "klanex[openai-agents]"
+from klanex.adapters import openai_agents_tool
+refund = openai_agents_tool(klanex, name="create_refund", description=..., target=..., payload_schema=...)</code></pre>
 <p>Or plain HTTP from anything else — the whole surface is in <a href="https://api.klanexai.com/openapi.yaml">openapi.yaml</a>.</p>
 </main>
 </div>

@@ -360,48 +360,56 @@
 
 <section class="section" id="code">
   <div class="container">
-    <h2 class="section-title">Three lines to production-ready</h2>
-    <p class="section-sub">Official SDKs for TypeScript and Python, or plain HTTP from anything else. The 422 self-correction loop comes free.</p>
+    <h2 class="section-title">Drop it into the agent framework<br /><span class="grad">you already use</span></h2>
+    <p class="section-sub">Official adapters turn any API call into a native tool for the Vercel AI SDK, the OpenAI Agents SDK, and LangGraph. The model's tool input becomes the payload. klanex owns the retries, credentials, and approvals, and hands back text the model can act on.</p>
     <div class="code-tabs">
       <div class="tab-row" role="tablist">
-        <button class="tab active" role="tab" data-tab="ts">TypeScript</button>
-        <button class="tab" role="tab" data-tab="py">Python</button>
+        <button class="tab active" role="tab" data-tab="ai">Vercel AI SDK</button>
+        <button class="tab" role="tab" data-tab="agents">OpenAI Agents</button>
+        <button class="tab" role="tab" data-tab="langgraph">LangGraph</button>
         <button class="tab" role="tab" data-tab="curl">curl</button>
       </div>
-      <pre class="code-panel active" data-panel="ts"><code><span class="c-kw">import</span> { Klanex, KlanexSchemaError } <span class="c-kw">from</span> <span class="c-str">"@klanex/sdk"</span>;
+      <pre class="code-panel active" data-panel="ai"><code><span class="c-kw">import</span> { generateText, stepCountIs } <span class="c-kw">from</span> <span class="c-str">"ai"</span>;
+<span class="c-kw">import</span> { Klanex } <span class="c-kw">from</span> <span class="c-str">"klanex"</span>;
+<span class="c-kw">import</span> { klanexTool } <span class="c-kw">from</span> <span class="c-str">"klanex/ai"</span>;
 
-<span class="c-kw">const</span> klanex = <span class="c-kw">new</span> <span class="c-fn">Klanex</span>({ apiKey, baseUrl });
+<span class="c-kw">const</span> klanex = <span class="c-kw">new</span> <span class="c-fn">Klanex</span>({ apiKey: process.env.KLANEX_API_KEY });
 
-<span class="c-kw">try</span> {
-  <span class="c-kw">const</span> { executionId } = <span class="c-kw">await</span> klanex.<span class="c-fn">execute</span>({
-    target: { url: <span class="c-str">"https://api.stripe.com/v1/refunds"</span>, headers: { Authorization: key } },
-    payload: agentGeneratedJson,
-    payloadSchema: refundSchema,
-    idempotencyKey: <span class="c-str">`refund-${chargeId}`</span>,
-  });
-} <span class="c-kw">catch</span> (err) {
-  <span class="c-kw">if</span> (err <span class="c-kw">instanceof</span> KlanexSchemaError) {
-    <span class="c-cm">// feed the hint back — the agent fixes its own payload</span>
-    messages.<span class="c-fn">push</span>({ role: <span class="c-str">"user"</span>, content: err.llmHint });
-    <span class="c-kw">return</span> <span class="c-fn">retryWithLLM</span>(messages);
-  }
-}</code></pre>
-      <pre class="code-panel" data-panel="py"><code><span class="c-kw">from</span> klanex <span class="c-kw">import</span> Klanex, KlanexSchemaError
+<span class="c-kw">const</span> refund = <span class="c-fn">klanexTool</span>(klanex, {
+  description: <span class="c-str">"Refund a Stripe charge"</span>,
+  inputSchema: z.<span class="c-fn">object</span>({ charge: z.<span class="c-fn">string</span>(), amount: z.<span class="c-fn">number</span>().<span class="c-fn">int</span>() }),
+  target: { url: <span class="c-str">"https://api.stripe.com/v1/refunds"</span>, connectionId: <span class="c-str">"con_…"</span> },
+});
 
-klanex = <span class="c-fn">Klanex</span>(api_key=API_KEY, base_url=BASE_URL)
+<span class="c-kw">await</span> <span class="c-fn">generateText</span>({ model, tools: { refund }, stopWhen: <span class="c-fn">stepCountIs</span>(<span class="c-str">5</span>), prompt });</code></pre>
+      <pre class="code-panel" data-panel="agents"><code><span class="c-kw">import</span> { Agent, run } <span class="c-kw">from</span> <span class="c-str">"@openai/agents"</span>;
+<span class="c-kw">import</span> { klanexTool } <span class="c-kw">from</span> <span class="c-str">"klanex/openai-agents"</span>;
 
-<span class="c-kw">try</span>:
-    accepted = klanex.<span class="c-fn">execute</span>(
-        target={<span class="c-str">"url"</span>: <span class="c-str">"https://api.stripe.com/v1/refunds"</span>,
-                <span class="c-str">"headers"</span>: {<span class="c-str">"Authorization"</span>: key}},
-        payload=agent_generated_json,
-        payload_schema=refund_schema,
-        idempotency_key=<span class="c-str">f"refund-{charge_id}"</span>,
-    )
-<span class="c-kw">except</span> KlanexSchemaError <span class="c-kw">as</span> err:
-    <span class="c-cm"># feed the hint back — the agent fixes its own payload</span>
-    messages.<span class="c-fn">append</span>({<span class="c-str">"role"</span>: <span class="c-str">"user"</span>, <span class="c-str">"content"</span>: err.llm_hint})
-    <span class="c-kw">return</span> <span class="c-fn">retry_with_llm</span>(messages)</code></pre>
+<span class="c-kw">const</span> refund = <span class="c-fn">klanexTool</span>(klanex, {
+  name: <span class="c-str">"create_refund"</span>,
+  description: <span class="c-str">"Refund a Stripe charge"</span>,
+  parameters: z.<span class="c-fn">object</span>({ charge: z.<span class="c-fn">string</span>(), amount: z.<span class="c-fn">number</span>().<span class="c-fn">int</span>() }),
+  target: { url: <span class="c-str">"https://api.stripe.com/v1/refunds"</span>, connectionId: <span class="c-str">"con_…"</span> },
+  requiresApproval: <span class="c-kw">true</span>, <span class="c-cm">// a human approves in Slack first</span>
+});
+
+<span class="c-kw">await</span> <span class="c-fn">run</span>(<span class="c-kw">new</span> <span class="c-fn">Agent</span>({ name: <span class="c-str">"Support"</span>, tools: [refund] }), prompt);
+
+<span class="c-cm">// Python: from klanex.adapters import openai_agents_tool</span></code></pre>
+      <pre class="code-panel" data-panel="langgraph"><code><span class="c-kw">from</span> langchain.agents <span class="c-kw">import</span> create_agent
+<span class="c-kw">from</span> klanex <span class="c-kw">import</span> AsyncKlanex
+<span class="c-kw">from</span> klanex.adapters <span class="c-kw">import</span> langchain_tool
+
+refund = <span class="c-fn">langchain_tool</span>(
+    <span class="c-fn">AsyncKlanex</span>(api_key=KLANEX_API_KEY),
+    name=<span class="c-str">"create_refund"</span>,
+    description=<span class="c-str">"Refund a Stripe charge"</span>,
+    target={<span class="c-str">"url"</span>: <span class="c-str">"https://api.stripe.com/v1/refunds"</span>, <span class="c-str">"connection_id"</span>: <span class="c-str">"con_…"</span>},
+    payload_schema=refund_schema,  <span class="c-cm"># the tool's own parameters</span>
+)
+
+agent = <span class="c-fn">create_agent</span>(model, tools=[refund])
+<span class="c-kw">await</span> agent.<span class="c-fn">ainvoke</span>({<span class="c-str">"messages"</span>: [(<span class="c-str">"user"</span>, prompt)]})</code></pre>
       <pre class="code-panel" data-panel="curl"><code><span class="c-dim">$</span> curl -s https://api.klanexai.com/v1/executions \
     -H <span class="c-str">"X-API-Key: klx_…"</span> \
     -d <span class="c-str">'{
@@ -413,6 +421,21 @@ klanex = <span class="c-fn">Klanex</span>(api_key=API_KEY, base_url=BASE_URL)
     }'</span>
 
 {<span class="c-str">"execution_id"</span>: <span class="c-str">"exe_4d0c85a6"</span>, <span class="c-str">"status"</span>: <span class="c-str">"QUEUED"</span>}</code></pre>
+    </div>
+
+    <div class="grid grid-3">
+      <div class="card">
+        <h3>Rejections come back as fixes</h3>
+        <p>When an API rejects the call, the tool returns the <code>llm_hint</code>, naming the bad field when klanex can tell. The model corrects one value and calls again, inside the same run.</p>
+      </div>
+      <div class="card">
+        <h3>Exactly once per tool call</h3>
+        <p>The framework's tool call ID becomes the idempotency key. A resumed graph or a retried step can call the tool again, and the refund still happens once.</p>
+      </div>
+      <div class="card">
+        <h3>Slow APIs never cause duplicates</h3>
+        <p>If the API is still retrying or a human has not approved yet, the model is told the action is in progress and not to call again. It never guesses and resubmits.</p>
+      </div>
     </div>
   </div>
 </section>

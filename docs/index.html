@@ -290,7 +290,7 @@ GET    /v1/connections/{id}/authorize     begin OAuth consent (browser)</code></
 
 <h2 id="sdks">SDKs</h2>
 <ul>
-  <li><strong>TypeScript / Node</strong>: <code>npm install klanex</code> (<a href="https://github.com/chrassy/klanex-js">github.com/chrassy/klanex-js</a>). Zero-dependency client, webhook verification, key rotation, plus adapters for the Vercel AI SDK (<code>klanex/ai</code>) and the OpenAI Agents SDK (<code>klanex/openai-agents</code>).</li>
+  <li><strong>TypeScript / Node</strong>: <code>npm install klanex-sdk</code> (<a href="https://github.com/chrassy/klanex-js">github.com/chrassy/klanex-js</a>). Zero-dependency client, webhook verification, key rotation, plus adapters for the Vercel AI SDK (<code>klanex-sdk/ai</code>) and the OpenAI Agents SDK (<code>klanex-sdk/openai-agents</code>).</li>
   <li><strong>Python</strong>: <code>pip install klanex</code> (<a href="https://github.com/chrassy/klanex-python">github.com/chrassy/klanex-python</a>). Sync and async clients, webhook verification, plus <code>klanex.adapters</code> for LangGraph / LangChain, the OpenAI Agents SDK, CrewAI, and Google ADK.</li>
 </ul>
 
@@ -305,7 +305,7 @@ GET    /v1/connections/{id}/authorize     begin OAuth consent (browser)</code></
 </table>
 <p>The framework's tool call ID becomes the <code>idempotency_key</code>, so a resumed or retried step never runs the action twice (turn it off with <code>idempotency: false</code> / <code>idempotency=False</code>). A plain JSON Schema is also sent as <code>payload_schema</code>, because these frameworks pass JSON Schema input through without validating it.</p>
 <pre><code>// Vercel AI SDK (ai 5, 6, or 7)
-import { klanexTool } from "klanex/ai";
+import { klanexTool } from "klanex-sdk/ai";
 const refund = klanexTool(klanex, {
   description: "Refund a Stripe charge",
   inputSchema: z.object({ charge: z.string(), amount: z.number().int() }),
@@ -314,7 +314,7 @@ const refund = klanexTool(klanex, {
 await generateText({ model, tools: { refund }, stopWhen: stepCountIs(5), prompt });
 
 // OpenAI Agents SDK
-import { klanexTool } from "klanex/openai-agents";
+import { klanexTool } from "klanex-sdk/openai-agents";
 const refund = klanexTool(klanex, { name: "create_refund", description, parameters, target });</code></pre>
 <pre><code># LangGraph / LangChain: pip install "klanex[langgraph]"
 from klanex.adapters import langchain_tool

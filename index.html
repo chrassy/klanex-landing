@@ -370,8 +370,8 @@
         <button class="tab" role="tab" data-tab="curl">curl</button>
       </div>
       <pre class="code-panel active" data-panel="ai"><code><span class="c-kw">import</span> { generateText, stepCountIs } <span class="c-kw">from</span> <span class="c-str">"ai"</span>;
-<span class="c-kw">import</span> { Klanex } <span class="c-kw">from</span> <span class="c-str">"klanex"</span>;
-<span class="c-kw">import</span> { klanexTool } <span class="c-kw">from</span> <span class="c-str">"klanex/ai"</span>;
+<span class="c-kw">import</span> { Klanex } <span class="c-kw">from</span> <span class="c-str">"klanex-sdk"</span>;
+<span class="c-kw">import</span> { klanexTool } <span class="c-kw">from</span> <span class="c-str">"klanex-sdk/ai"</span>;
 
 <span class="c-kw">const</span> klanex = <span class="c-kw">new</span> <span class="c-fn">Klanex</span>({ apiKey: process.env.KLANEX_API_KEY });
 
@@ -383,7 +383,7 @@
 
 <span class="c-kw">await</span> <span class="c-fn">generateText</span>({ model, tools: { refund }, stopWhen: <span class="c-fn">stepCountIs</span>(<span class="c-str">5</span>), prompt });</code></pre>
       <pre class="code-panel" data-panel="agents"><code><span class="c-kw">import</span> { Agent, run } <span class="c-kw">from</span> <span class="c-str">"@openai/agents"</span>;
-<span class="c-kw">import</span> { klanexTool } <span class="c-kw">from</span> <span class="c-str">"klanex/openai-agents"</span>;
+<span class="c-kw">import</span> { klanexTool } <span class="c-kw">from</span> <span class="c-str">"klanex-sdk/openai-agents"</span>;
 
 <span class="c-kw">const</span> refund = <span class="c-fn">klanexTool</span>(klanex, {
   name: <span class="c-str">"create_refund"</span>,
@@ -437,6 +437,7 @@ agent = <span class="c-fn">create_agent</span>(model, tools=[refund])
         <p>If the API is still retrying or a human has not approved yet, the model is told the action is in progress and not to call again. It never guesses and resubmits.</p>
       </div>
     </div>
+    <p class="section-sub mcp-links"><code>npm i klanex-sdk</code> · <code>pip install klanex</code> · <a class="inline-link" href="https://www.npmjs.com/package/klanex-sdk" target="_blank" rel="noopener">npm</a> · <a class="inline-link" href="https://pypi.org/project/klanex/" target="_blank" rel="noopener">PyPI</a> · <a class="inline-link" href="https://github.com/chrassy/klanex-js" target="_blank" rel="noopener">TypeScript on GitHub</a> · <a class="inline-link" href="https://github.com/chrassy/klanex-python" target="_blank" rel="noopener">Python on GitHub</a></p>
   </div>
 </section>
 

@@ -172,13 +172,13 @@
   <tr><th>Code</th><th>Terminal?</th><th>Meaning</th></tr>
   <tr><td><code>SCHEMA_INVALID</code></td><td>yes (422 at submit)</td><td>Payload failed your schema — fix and resubmit.</td></tr>
   <tr><td><code>TARGET_TIMEOUT</code></td><td>retried</td><td>Target didn't answer in time.</td></tr>
-  <tr><td><code>TARGET_RATE_LIMITED</code></td><td>retried</td><td>Target returned 429.</td></tr>
-  <tr><td><code>TARGET_UNAVAILABLE</code></td><td>retried</td><td>Target 5xx / connection failure.</td></tr>
-  <tr><td><code>TARGET_REJECTED</code></td><td>yes</td><td>Target 4xx, or a <a href="#2xx-failures">2xx whose body reports a failure</a>. Retrying won't help; correct the request.</td></tr>
+  <tr><td><code>TARGET_RATE_LIMITED</code></td><td>retried</td><td>Target returned 429, or another rejection whose response <a href="#diagnosis">reports a rate limit</a>.</td></tr>
+  <tr><td><code>TARGET_UNAVAILABLE</code></td><td>retried</td><td>Target 5xx / connection failure, or a rejection whose response <a href="#diagnosis">reports a temporary condition</a>.</td></tr>
+  <tr><td><code>TARGET_REJECTED</code></td><td>yes</td><td>Target 4xx, or a <a href="#2xx-failures">2xx whose body reports a failure</a>. Retrying won't help; correct the request as the <code>llm_hint</code> and <a href="#diagnosis"><code>diagnosis</code></a> say.</td></tr>
   <tr><td><code>CIRCUIT_OPEN</code></td><td>retried</td><td>Host breaker open; klanex waits it out.</td></tr>
   <tr><td><code>ATTEMPTS_EXHAUSTED</code></td><td>yes</td><td>Retry budget spent.</td></tr>
   <tr><td><code>APPROVAL_REJECTED</code></td><td>yes</td><td>A human said no.</td></tr>
-  <tr><td><code>CONNECTION_UNAUTHORIZED</code></td><td>yes</td><td>Vault connection can't mint a valid token — reauthorize it.</td></tr>
+  <tr><td><code>CONNECTION_UNAUTHORIZED</code></td><td>yes</td><td>Vault connection can't mint a valid token, or the target rejected its credential. Reauthorize it.</td></tr>
   <tr><td><code>RATE_LIMITED</code></td><td>429 at submit</td><td>Your tenant rate limit; honor <code>Retry-After</code>.</td></tr>
 </table>
 
@@ -186,9 +186,32 @@
 <p>Some APIs report errors with a success status: Slack returns <code>{"ok": false}</code>, GraphQL returns an <code>errors</code> array. klanex checks every 2xx body and fails the execution as <code>TARGET_REJECTED</code> when the body says the operation did not happen.</p>
 <ul>
   <li><strong>Rules</strong> run on every response: a top-level <code>"ok": false</code> or <code>"success": false</code>, a <code>"status"</code> of <code>error</code>, <code>fail</code>, <code>failed</code> or <code>failure</code>, or a non-empty <code>errors</code> array with no <code>data</code>. An explicit <code>"ok": true</code> or <code>"success": true</code> is accepted as is.</li>
-  <li><strong>A model check</strong> covers the rest. Bodies that mention failure words (<code>error</code>, <code>invalid</code>, <code>denied</code>, ...) get a yes/no judgment from TypeSafe's Jev model, and only a confident "this reports a failure" fails the execution. An unsure answer or an unavailable model keeps the success. The check receives the HTTP method, target host, status code and the first 8&nbsp;KB of the response body. Your payload, headers and full URL are never sent.</li>
+  <li><strong>A model check</strong> covers the rest. Bodies that mention failure words (<code>error</code>, <code>invalid</code>, <code>denied</code>, ...) get a yes/no judgment from TypeSafe's Jev model, and only a confident "this reports a failure" fails the execution. An unsure answer or an unavailable model keeps the success. See <a href="#model-sees">what the model sees</a>.</li>
 </ul>
 <p>The failed execution keeps <code>result</code> (status code and body) so you can see exactly what the target said, and <code>error.message</code> names the check that fired. Bodies that merely mention an error as data, such as a list of log entries, stay successful.</p>
+
+<h3 id="diagnosis">Diagnosing rejections</h3>
+<p>When a call fails (a 4xx, or a 2xx whose body reports failure), klanex reads the response to find the <strong>cause</strong> and, when the error points at one, the <strong>payload field</strong>. Both land in <code>error.diagnosis</code>, and the <code>llm_hint</code> is written for that cause:</p>
+<pre><code>"error": {
+  "code": "TARGET_REJECTED",
+  "llm_hint": "The target API rejected the request with status 400 because of the payload field `amount`. …",
+  "diagnosis": { "cause": "invalid_payload", "field": "amount" }
+}</code></pre>
+<table>
+  <tr><th>Cause</th><th>Meaning</th><th>What klanex does</th></tr>
+  <tr><td><code>invalid_payload</code></td><td>A field is missing, malformed, out of range, or stale (outdated version or etag).</td><td><code>TARGET_REJECTED</code>; the hint names the field when known.</td></tr>
+  <tr><td><code>auth</code></td><td>Credential missing, invalid, expired, or revoked. Every 401.</td><td><code>TARGET_REJECTED</code>, or <code>CONNECTION_UNAUTHORIZED</code> for a vault connection.</td></tr>
+  <tr><td><code>permission</code></td><td>Authenticated but not allowed: scope, role, plan, or quota.</td><td><code>TARGET_REJECTED</code>; the hint says not to retry.</td></tr>
+  <tr><td><code>not_found</code></td><td>The endpoint or a referenced ID or name does not exist.</td><td><code>TARGET_REJECTED</code>; the hint says to look the value up, not guess.</td></tr>
+  <tr><td><code>already_exists</code></td><td>A duplicate, or the action was already performed.</td><td><code>TARGET_REJECTED</code>, or <code>SUCCEEDED</code> when klanex's own earlier attempt did it.</td></tr>
+  <tr><td><code>rate_limited</code></td><td>The API asks to slow down, whatever the status code.</td><td>Retried as <code>TARGET_RATE_LIMITED</code>.</td></tr>
+  <tr><td><code>transient</code></td><td>A temporary condition; the same request succeeds later.</td><td>Retried as <code>TARGET_UNAVAILABLE</code>.</td></tr>
+</table>
+<p><code>diagnosis</code> is present only when the model is confident, and <code>field</code> only when the error clearly points at a field that was sent, so treat both as optional. Only confident diagnoses change the outcome; a less certain one only shapes the hint, and an unclear response gets the plain rejection. New causes may be added.</p>
+<p><strong>Duplicates of klanex's own attempt.</strong> If an attempt timed out or got a 5xx after sending the request, the target may have performed the action anyway. When the retry is then rejected as <code>already_exists</code>, the execution is <code>SUCCEEDED</code>: <code>result</code> holds the rejection response and <code>result.note</code> explains why it counted.</p>
+
+<h3 id="model-sees">What the model sees</h3>
+<p>The model checks use TypeSafe's Jev model and send only the HTTP method, target host, status code, the first 8&nbsp;KB of the response body, and your payload's field <em>names</em> (such as <code>customer.email</code> or <code>items[0].price</code>). Payload values, headers and the full URL are never sent. A payload that uses data as object keys, such as a map keyed by email address, exposes those keys as field names.</p>
 
 <h2 id="vault">Token vault (connections)</h2>
 <p>Store credentials once, reference them by ID — agents never see raw secrets, and OAuth tokens refresh automatically.</p>

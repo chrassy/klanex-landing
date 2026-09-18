@@ -155,7 +155,7 @@
       <div class="flow-step">
         <div class="flow-num">3</div>
         <h3>Execute</h3>
-        <p>Isolated workers make the real call with per-host circuit breakers, timeouts, and exponential backoff on 429s, 5xxs, and outages. A 200 only counts once its body agrees.</p>
+        <p>Isolated workers make the real call with per-host circuit breakers, timeouts, and exponential backoff on 429s, 5xxs, and outages. A 200 only counts once its body agrees, and a 403 that means "slow down" gets retried.</p>
       </div>
       <div class="flow-arrow">→</div>
       <div class="flow-step">
@@ -248,9 +248,51 @@
       </div>
       <div class="card">
         <h3>The evidence stays on the record</h3>
-        <p>The failed execution keeps the exact response, the message names which check fired, and the <code>llm_hint</code> tells your agent what to fix. The check sees the response body and host, never your payload or credentials.</p>
+        <p>The failed execution keeps the exact response, the message names which check fired, and the <code>llm_hint</code> tells your agent what to fix. The check sees the response body and host, never your payload values or credentials.</p>
       </div>
     </div>
+  </div>
+</section>
+
+<section class="section" id="rejections">
+  <div class="container">
+    <p class="hero-eyebrow centered"><span class="pill">New: every rejection, diagnosed</span></p>
+    <h2 class="section-title">A <code>403</code> can mean a dozen things.<br /><span class="grad">klanex tells your agent which one.</span></h2>
+    <p class="section-sub">Status codes are a poor guide to what an agent should do next. GitHub sends its secondary rate limit as a 403. A 409 can be a duplicate or a lock that clears in a second. A 400 usually names the bad field, each API in its own format. klanex reads the response, works out the cause and the field, and acts on it.</p>
+
+    <div class="terminal" role="img" aria-label="A rejected Stripe call with a diagnosis naming the amount field">
+      <div class="terminal-bar">
+        <span class="tdot tdot-r"></span><span class="tdot tdot-y"></span><span class="tdot tdot-g"></span>
+        <span class="terminal-title">api.stripe.com → 400 → diagnosed</span>
+      </div>
+      <pre class="terminal-body"><code><span class="t-dim">$</span> <span class="t-cmd">curl -s https://api.klanexai.com/v1/executions/exe_4c1e… -H "X-API-Key: klx_…"</span>
+
+<span class="t-cmd">{</span>
+<span class="t-err">  "status": "FAILED",</span>
+<span class="t-cmd">  "error": {</span>
+<span class="t-err">    "code": "TARGET_REJECTED",</span>
+<span class="t-ok">    "diagnosis": { "cause": "invalid_payload", "field": "amount" },</span>
+<span class="t-ok">    "llm_hint": "The target API rejected the request with status 400 because of the payload</span>
+<span class="t-ok">                 field `amount`. ... Correct that field as the response describes and resubmit."</span>
+<span class="t-cmd">  }</span>
+<span class="t-cmd">}</span></code></pre>
+    </div>
+
+    <div class="grid grid-3">
+      <div class="card">
+        <h3>The bad field, by name</h3>
+        <p>The <code>llm_hint</code> points at the exact payload field, like <code>amount</code> or <code>line_items[0].quantity</code>, so the model fixes one value instead of rewriting the whole call. <code>error.diagnosis</code> carries the same answer for your code.</p>
+      </div>
+      <div class="card">
+        <h3>Disguised rate limits get retried</h3>
+        <p>A 403 or 409 whose body says "slow down" or "try again" goes back on the retry queue with backoff instead of failing the task. Your agent does nothing, same as for a plain 429.</p>
+      </div>
+      <div class="card">
+        <h3>Your own duplicates count as done</h3>
+        <p>When an attempt times out after reaching the API, the retry's "already exists" is that attempt's success. klanex marks it succeeded and says why, so the agent never sends it a third time.</p>
+      </div>
+    </div>
+    <p class="section-sub">Only a confident diagnosis changes what happens. An unclear response gets the plain rejection. The check uses TypeSafe's Jev model and sees the response, the host, and your payload's field names. Never the values, never your credentials.</p>
   </div>
 </section>
 
